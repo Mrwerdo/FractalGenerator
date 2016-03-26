@@ -1,0 +1,2 @@
+# Ignore swift build directory.
+.build/
