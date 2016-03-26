@@ -1,11 +1,3 @@
-//
-//  Geometry.swift
-//  PathSearch
-//
-//  Created by Andrew Thompson on 26/07/2015.
-//  Copyright © 2015 Andrew Thompson. All rights reserved.
-//
-
 import Foundation
 
 /// Merges the values of `lhs` and `rhs` by calling `op` on the members `x` and `y` of `Point`.
@@ -53,7 +45,8 @@ extension CGRect {
     }
 }
 
-// These are for image sizes. Using floating point values is not a good idea.
+// These structures use integers rather than the core graphics equivelant.
+// This avoids floating point error makes the code easier write.
 
 public struct Point {
     var x: Int
