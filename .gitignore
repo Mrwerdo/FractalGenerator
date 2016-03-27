@@ -1,2 +1,6 @@
 # Ignore swift build directory.
 .build/
+# Ignore OS X directory information.
+.DS_STORE
+# Ignore aquire package information.
+Packages/
