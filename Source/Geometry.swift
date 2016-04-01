@@ -88,7 +88,7 @@ public struct Size {
     public var height: Int
     
     public init() { width = 0; height = 0 }
-    public init(width: Int, height: Int) {
+    public init(_ width: Int, _ height: Int) {
         self.width = width
         self.height = height
     }
@@ -96,7 +96,7 @@ public struct Size {
 
 /// Merges the values of `lhs` and `rhs` by calling `op` on the members `width` and `height` of `Size`.
 private func size_operator(lhs: Size, rhs: Size, op: (lhs: Int, rhs: Int) -> Int) -> Size {
-    return Size(width: op(lhs: lhs.width, rhs: rhs.width), height: op(lhs: lhs.height, rhs: rhs.height))
+    return Size(op(lhs: lhs.width, rhs: rhs.width), op(lhs: lhs.height, rhs: rhs.height))
 }
 
 public func +(lhs: Size, rhs: Size) -> Size {

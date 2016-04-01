@@ -4,32 +4,29 @@ var tif = TIFFOpen("/Users/mrwerdo/Developer/Fractals/redesigned-palm-tree-fract
 if tif != nil {
 	var width: UInt32 = 100
 	var height: UInt32 = 100
-	let size = Int(width * height * 3)
+	let size = Int(width * height * 4)
 
 	TIFFSetField_uint32(tif, UInt32(TIFFTAG_IMAGEWIDTH), width)
 	TIFFSetField_uint32(tif, UInt32(TIFFTAG_IMAGELENGTH), height)
 	TIFFSetField_uint32(tif, UInt32(TIFFTAG_BITSPERSAMPLE), 8)
-	TIFFSetField_uint32(tif, UInt32(TIFFTAG_SAMPLESPERPIXEL), 3)
+	TIFFSetField_uint32(tif, UInt32(TIFFTAG_SAMPLESPERPIXEL), 4)
 	TIFFSetField_uint32(tif, UInt32(TIFFTAG_ROWSPERSTRIP), 1)
+
+	var extraChannels: [UInt16] = [UInt16(EXTRASAMPLE_ASSOCALPHA)]
+	TIFFSetField_ExtraSample(tif, 1, &extraChannels)
 	
 	TIFFSetField_uint32(tif, UInt32(TIFFTAG_PHOTOMETRIC), UInt32(PHOTOMETRIC_RGB))
 	TIFFSetField_uint32(tif, UInt32(TIFFTAG_PLANARCONFIG), UInt32(PLANARCONFIG_CONTIG))
 	TIFFSetField_uint32(tif, UInt32(TIFFTAG_ORIENTATION), UInt32(ORIENTATION_TOPLEFT))
 
-	var buffer = [[UInt8]](count: Int(height), repeatedValue: [UInt8](count: Int(width * 3), repeatedValue: 0))
+	var buffer = [[UInt8]](count: Int(height), repeatedValue: [UInt8](count: Int(width * 4), repeatedValue: 0))
 
 	for y in 0..<Int(height) {
-		for x in 0.stride(to: Int(width * 3), by: 3) {
-			switch x % 9 {
-			case 0:
-				buffer[y][x] = 255
-			case 3:
-				buffer[y][x + 1] = 255
-			case 6:
-				buffer[y][x + 2] = 255
-			default:
-				break
-			}
+		for x in 0.stride(to: Int(width * 4), by: 4) {
+			buffer[y][x] = UInt8(x % 255)
+			buffer[y][x+2] = UInt8((Int(width * 4) - x) % 255)
+			buffer[y][x+1] = 0
+			buffer[y][x+3] = 255 // alpha
 		}
 	}
 
