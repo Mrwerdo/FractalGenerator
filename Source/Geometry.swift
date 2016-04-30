@@ -1,7 +1,7 @@
 import Foundation
 
 /// Merges the values of `lhs` and `rhs` by calling `op` on the members `x` and `y` of `Point`.
-private func point_operator(lhs: CGPoint, rhs: CGPoint, op: (lhs: CGFloat, rhs: CGFloat) -> CGFloat) -> CGPoint {
+private func point_operator(_ lhs: CGPoint, rhs: CGPoint, op: (lhs: CGFloat, rhs: CGFloat) -> CGFloat) -> CGPoint {
     return CGPoint(x: op(lhs: lhs.x, rhs: rhs.x), y: op(lhs: lhs.y, rhs: rhs.y))
 }
 
@@ -25,7 +25,7 @@ public func ==(lhs: CGPoint, rhs: CGPoint) -> Bool {
 }
 
 /// Merges the values of `lhs` and `rhs` by calling `op` on the members `width` and `height` of `Size`.
-private func size_operator(lhs: CGSize, rhs: CGSize, op: (lhs: CGFloat, rhs: CGFloat) -> CGFloat) -> CGSize {
+private func size_operator(_ lhs: CGSize, rhs: CGSize, op: (lhs: CGFloat, rhs: CGFloat) -> CGFloat) -> CGSize {
     return CGSize(width: op(lhs: lhs.width, rhs: rhs.width), height: op(lhs: lhs.height, rhs: rhs.height))
 }
 
@@ -53,15 +53,15 @@ public struct Point {
     var y: Int
     
     init() { x = 0; y = 0 }
-    init(x: Int, y: Int) {
+    init(_ x: Int, _ y: Int) {
         self.x = x
         self.y = y
     }
 }
 
 /// Merges the values of `lhs` and `rhs` by calling `op` on the members `x` and `y` of `Point`.
-private func point_operator(lhs: Point, rhs: Point, op: (lhs: Int, rhs: Int) -> Int) -> Point {
-    return Point(x: op(lhs: lhs.x, rhs: rhs.x), y: op(lhs: lhs.y, rhs: rhs.y))
+private func point_operator(_ lhs: Point, rhs: Point, op: (lhs: Int, rhs: Int) -> Int) -> Point {
+    return Point(op(lhs: lhs.x, rhs: rhs.x), op(lhs: lhs.y, rhs: rhs.y))
 }
 
 public func +(lhs: Point, rhs: Point) -> Point {
@@ -95,7 +95,7 @@ public struct Size {
 }
 
 /// Merges the values of `lhs` and `rhs` by calling `op` on the members `width` and `height` of `Size`.
-private func size_operator(lhs: Size, rhs: Size, op: (lhs: Int, rhs: Int) -> Int) -> Size {
+private func size_operator(_ lhs: Size, rhs: Size, op: (lhs: Int, rhs: Int) -> Int) -> Size {
     return Size(op(lhs: lhs.width, rhs: rhs.width), op(lhs: lhs.height, rhs: rhs.height))
 }
 

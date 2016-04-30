@@ -22,25 +22,19 @@ public struct Time {
 
 #if os(OSX)
 
-import Cocoa
-
-extension NSImage {
-	public func saveAsTIFF(filename: String) -> Bool {
-		return TIFFRepresentation?.writeToFile(filename, atomically: false) ?? false
-	}
-}
+import Foundation
 
 extension NSURL {
-	enum FileErrors : ErrorType {
+	enum FileErrors : ErrorProtocol {
 		case CouldNotMakeUniqueFilename
 	}
 
 	convenience init(uniqueName name: String, type: String, version: String, base: NSURL) throws {
 		let fm = NSFileManager()
-		let filedir = base.URLByAppendingPathComponent(name).path!
+		let filedir = base.appendingPathComponent(name).path!
 		var uniqueNumber = 0
 		var path = filedir + "\(uniqueNumber)" + "\(version)" + type
-		while fm.fileExistsAtPath(path) {
+		while fm.fileExists(atPath: path) {
 			uniqueNumber += 1
 			path = filedir + "\(uniqueNumber)" + "\(version)" + type
 		}

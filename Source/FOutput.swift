@@ -10,7 +10,7 @@
 public protocol FOutput {
 	associatedtype ColorType
 	var size: Size { get set }
-	func writeAt(point: Point, color: Color<ColorType>)
+	func writeAt(_ point: Point, color: Color<ColorType>)
 }
 
 extension FOutput {

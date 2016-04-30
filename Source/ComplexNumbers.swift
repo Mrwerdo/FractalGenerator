@@ -63,16 +63,16 @@ public func /(lhs: Complex, rhs: Complex) -> Complex {
 //                          Assignment Operators
 // -----------------------------------------------------------------------------
 
-public func +=(inout lhs: Complex, rhs: Complex) {
+public func +=(lhs: inout Complex, rhs: Complex) {
     lhs = lhs + rhs
 }
-public func -=(inout lhs: Complex, rhs: Complex) {
+public func -=(lhs: inout Complex, rhs: Complex) {
     lhs = lhs - rhs
 }
-public func *=(inout lhs: Complex, rhs: Complex) {
+public func *=(lhs: inout Complex, rhs: Complex) {
     lhs = lhs * rhs
 }
-public func /=(inout lhs: Complex, rhs: Complex) {
+public func /=(lhs: inout Complex, rhs: Complex) {
     lhs = lhs / rhs
 }
 
@@ -110,10 +110,10 @@ public func *(lhs: Complex, rhs: Double) -> Complex { // Imaginary times real
 //                              Functions
 // -----------------------------------------------------------------------------
 
-public func abs(n: Complex) -> Double {
+public func abs(_ n: Complex) -> Double {
     return sqrt(n.real * n.real + n.imaginary * n.imaginary)
 }
-public func modulus(n: Complex) -> Double {
+public func modulus(_ n: Complex) -> Double {
     return abs(n)
 }
 
@@ -121,7 +121,7 @@ public func **(lhs: Double, rhs: Double) -> Double {
     return pow(lhs, rhs)
 }
 
-public func pow(base: Complex, _ n: Double) -> Complex {
+public func pow(_ base: Complex, _ n: Double) -> Complex {
     let r = modulus(base) ** n
     let arg = base.arg
     let real = r * cos(n * arg)
@@ -137,7 +137,7 @@ public func **(base: Complex, n: Int) -> Complex {
     return pow(base, Double(n))
 }
 
-public func factorial(n: Int) -> Int {
+public func factorial(_ n: Int) -> Int {
     if n == 0 {
         return 1
     }
@@ -148,14 +148,14 @@ public func factorial(n: Int) -> Int {
     return sum
 }
 
-public func e(x: Double, accuracy: Int = 5) -> Double {
+public func e(_ x: Double, accuracy: Int = 5) -> Double {
     var sum = 0.0
     for n in 0...accuracy {
         sum += x ** Double(n) / Double(factorial(n))
     }
     return sum
 }
-public func e(x: Complex, accuracy: Int = 5) -> Complex {
+public func e(_ x: Complex, accuracy: Int = 5) -> Complex {
     let r = e(x.real, accuracy: accuracy)
     return Complex(cos(x.imaginary), sin(x.imaginary)) * r
 }

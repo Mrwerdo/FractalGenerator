@@ -4,7 +4,7 @@ public struct Color<Type> {
 	public var blue: Type
 	public var alpha: Type
 
-	public init(red: Type, _ green: Type, _ blue: Type, _ alpha: Type) {
+	public init(_ red: Type, _ green: Type, _ blue: Type, _ alpha: Type) {
 		self.red = red
 		self.green = green
 		self.blue = blue

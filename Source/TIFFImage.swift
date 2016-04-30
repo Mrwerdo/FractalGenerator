@@ -2,7 +2,7 @@ import CLibTIFF
 
 public class TIFFImage {
 
-	public var tiffref: COpaquePointer // TIFF* in c
+	public var tiffref: OpaquePointer // TIFF* in c
 	public var path: String
 
 	public var size: Size
@@ -24,7 +24,7 @@ public class TIFFImage {
 	private var planarconfig: UInt32
 	private var orientation: UInt32
 
-	public enum Errors : ErrorType {
+	public enum Errors : ErrorProtocol {
 		case Open
 		case Flush
 		case WriteScanline
@@ -70,26 +70,26 @@ public class TIFFImage {
 	deinit {
 		TIFFClose(tiffref)
 		if ownsBuffer {
-			buffer.dealloc(size.width * size.height * Int(samplesPerPixel))
+			buffer.deallocateCapacity(size.width * size.height * Int(samplesPerPixel))
 		}
 	}
 
 	public func write() throws {
 		for y in 0..<size.height {
-			guard TIFFWriteScanline(tiffref, buffer.advancedBy(y * size.width * Int(samplesPerPixel)), UInt32(y), 0) == 1 else {
+			guard TIFFWriteScanline(tiffref, buffer.advanced(by: y * size.width * Int(samplesPerPixel)), UInt32(y), 0) == 1 else {
 				throw Errors.WriteScanline
 			}
 		}
 		try flush()
 	}
 
-	private func setField(tag: Int32, _ value: UInt32) throws {
+	private func setField(_ tag: Int32, _ value: UInt32) throws {
 		guard TIFFSetField_uint32(tiffref, UInt32(tag), value) == 1 else {
 			throw Errors.SetField
 		}
 	}
 
-	private func setSize(size: Size) throws {
+	private func setSize(_ size: Size) throws {
 		let width = UInt32(size.width)
 		let height = UInt32(size.height)
 		try setField(TIFFTAG_IMAGEWIDTH, width)
@@ -112,7 +112,7 @@ public class TIFFImage {
 
 	}
 
-	private func getField(tag: Int32) throws -> UInt32 {
+	private func getField(_ tag: Int32) throws -> UInt32 {
 		var value: UInt32 = 0
 		guard TIFFGetField_uint32(tiffref, UInt32(tag), &value) == 1 else {
 			throw Errors.GetField
