@@ -1,18 +1,19 @@
-/// FRenderer
-///
-/// Coordinates the process of creating a fractal.
-///
+// =============================================================================
+// Written by Andrew Thompson
+// =============================================================================
 
-public protocol FRenderer {
-	associatedtype ColorType
-	associatedtype ZValue
-        associatedtype Computer: FComputer
-        associatedtype Painter: FColoring
-        associatedtype Writer: FOutput
-	
-	var size: Size { get set }
-	
-	var computer: Computer { get set }
-	var painetr: Painter { get set }
-	var writer: Writer { get set }
-}	
+public protocol FController {
+    associatedtype ColorType
+    associatedtype ZValue
+    associatedtype Computer: FComputer
+    associatedtype Colorizer: FColorizer
+    associatedtype Renderer: FOutputRenderer
+    
+    var size: Size { get set }
+    
+    var computer: Computer { get set }
+    var colorizer: Colorizer { get set }
+    var renderer: Renderer { get set }
+}
+
+
