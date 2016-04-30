@@ -1,3 +1,8 @@
+// =============================================================================
+// Color.swift
+// Written by Andrew Thompson
+// =============================================================================
+
 public struct Color<Type> {
 	public var red: Type
 	public var green: Type
