@@ -4,3 +4,7 @@
 .DS_STORE
 # Ignore aquire package information.
 Packages/
+# Ignore make build directory.
+bin/
+# Ignore auto-generated files.
+Fractal.tiff
