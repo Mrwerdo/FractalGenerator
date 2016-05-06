@@ -1,18 +1,21 @@
 // =============================================================================
+// FOutputRenderer 🖼
+// 
 // Written by Andrew Thompson
 // =============================================================================
 
 public protocol FOutputRenderer {
     associatedtype ColorType
     var size: Size { get set }
-    func writeAt(_ point: Point, color: Color<ColorType>)
+    func write(at point: Point, color: Color<ColorType>) throws
+    func write(buffer: ColorBuffer<ColorType>) throws
 }
 
 extension FOutputRenderer {
-    func writeAll(buffer: ColorBuffer<ColorType>) {
+    func write(buffer: ColorBuffer<ColorType>) throws {
         for y in 0..<size.height {
             for x in 0..<size.width {
-                writeAt(Point(x, y), color: buffer[y * size.width + x])
+                try write(at: Point(x, y), color: buffer[y * size.width + x])
             }
         }
     }

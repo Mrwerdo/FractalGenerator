@@ -1,12 +1,8 @@
-/// FComputer
-///
-/// Declares the functionality of a fractal computer.
-///
-/// In the process model, it is the first, i.e.
-///
-///		FComputer -> FColoring -> FOutput
-///     ^^^^^^^^^
-///
+// =============================================================================
+// FComputer 🖥
+//
+// Written by Andrew Thompson
+// =============================================================================
 
 public protocol FComputer {
 	associatedtype ZValue

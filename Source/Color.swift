@@ -1,5 +1,5 @@
 // =============================================================================
-// Color.swift
+// Color.swift 🖌
 // Written by Andrew Thompson
 // =============================================================================
 
@@ -28,21 +28,59 @@ public struct ColorBuffer<DataType> {
 		self.length = length
 	}
 
-	public subscript (index: Int) -> Color<DataType> {
+	public subscript(index: Int) -> Color<DataType> {
 		get {
-			assert(index < length/4 , "index out of range")
-			let r = buffer[index + 0]
-			let g = buffer[index + 1]
-			let b = buffer[index + 2]
-			let a = buffer[index + 3]
+			assert(index < length/4 && length % 4 == 0, "index out of range")
+			let r = buffer[4 * index + 0]
+			let g = buffer[4 * index + 1]
+			let b = buffer[4 * index + 2]
+			let a = buffer[4 * index + 3]
 			return Color(r, g, b, a)
 		}
 		set(color) {
-			assert(index < length/4, "index out of range")
-			buffer[index + 0] = color.red
-			buffer[index + 1] = color.green
-			buffer[index + 2] = color.blue
-			buffer[index + 3] = color.alpha
+			assert(index < length/4 && length % 4 == 0, "index out of range")
+			buffer[4 * index + 0] = color.red
+			buffer[4 * index + 1] = color.green
+			buffer[4 * index + 2] = color.blue
+			buffer[4 * index + 3] = color.alpha
 		}
+	}
+}
+
+public struct ColorBufferGenerator<DataType> : IteratorProtocol { 
+	public var nextIndex: () -> Color<DataType>?
+	public init(_ method: () -> Color<DataType>?) {
+		self.nextIndex = method
+	}
+
+	public func next() -> Color<DataType>? {
+		return nextIndex()
+	}
+}
+
+extension ColorBuffer : Sequence {
+
+	func generate() -> ColorBufferGenerator<DataType> {
+		var index = 0
+		let length = self.length
+		let next: () -> Color<DataType>? = {
+			index += 1
+			if (index * 4) <= length {
+				return self[index]
+			}
+			return nil
+		}
+		return ColorBufferGenerator(next)
+	}
+}
+
+extension ColorBuffer : Collection {
+	public typealias Index = Int
+
+	public var startIndex: Int {
+		return 0
+	}
+	public var endIndex: Int {
+		return self.length
 	}
 }
