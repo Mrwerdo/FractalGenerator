@@ -77,6 +77,18 @@ extension ColorBuffer : Sequence {
 extension ColorBuffer : Collection {
 	public typealias Index = Int
 
+	public func index(after i: Int) -> Int {
+		return i + 1
+	}
+
+	public func index(_ i: Int, offsetBy n: Int, limitedBy limit: Int) -> Int? {
+		let index = i + n + 1
+		if index < self.length && index < limit {
+			return index
+		}
+		return nil
+	}
+
 	public var startIndex: Int {
 		return 0
 	}
