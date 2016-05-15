@@ -12,5 +12,3 @@ public protocol FColorizer {
 	associatedtype ZValue
 	func colorAt(point: Point, value: ZValue) -> Color<ColorType>
 }
-
-
