@@ -1,4 +1,5 @@
 import CLibTIFF
+import Process
 
 let size = 20
 let ptr = UnsafeMutablePointer<UInt8>(allocatingCapacity: size)
