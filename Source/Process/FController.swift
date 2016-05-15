@@ -4,6 +4,8 @@
 // Written by Andrew Thompson
 // =============================================================================
 
+import Geometry
+
 public protocol FController {
     associatedtype ColorType
     associatedtype ZValue

@@ -1,4 +1,4 @@
-import CLibTIFF
+import Support
 import Process
 
 let size = 20
@@ -17,3 +17,5 @@ assert(colorBuffer[4].green == 255, "value returned is not what was expected")
 assert(colorBuffer[1].blue == 255, "value returned is not what was expected")
 assert(colorBuffer[3].alpha == 255, "value returned is not what was expected")
 
+
+print("Program runs! Yay! 😁")

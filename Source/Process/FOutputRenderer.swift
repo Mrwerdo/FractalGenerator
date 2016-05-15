@@ -4,6 +4,9 @@
 // Written by Andrew Thompson
 // =============================================================================
 
+import Geometry
+import Support
+
 public protocol FOutputRenderer {
     associatedtype ColorType
     var size: Size { get set }
