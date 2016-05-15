@@ -1,5 +1,5 @@
 import XCTest
-@testable import Color
+@testable import Support
 
 class ColorTests: XCTestCase {
 
@@ -23,9 +23,9 @@ class ColorTests: XCTestCase {
 	}
 }
 extension ColorTests {
-	static var allTests : [(String, ColorTests -> () throws -> Void)] {
+	static var allTests : [(String, (ColorTests) -> () throws -> Void)] {
 		return [
-			("testExample", testExample),
+			("basicArrayAccess", basicArrayAccess),
 		]
 	}
 }
