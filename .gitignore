@@ -8,3 +8,5 @@ Packages/
 bin/
 # Ignore auto-generated files.
 Fractal.tiff
+# Ignore xcode projects.
+*.xcodeproj/
