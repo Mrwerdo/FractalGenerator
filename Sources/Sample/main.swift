@@ -26,10 +26,10 @@ struct MandelbrotSet : FComputer {
 struct ModulusColorizer : FColorizer {
     
     func colorAt(point: Point, value: Int) -> Color<UInt8> {
-        let r = UInt8(value % 64)
-        let g = UInt8(value % 32)
-        let b = UInt8(value % 16)
-        return Color(r, g, b, 0)
+        let r = UInt8(value % 128)
+        let g = UInt8(value % 64)
+        let b = UInt8(value % 32)
+        return Color(r, g, b, 255)
     }
 }
 
@@ -45,7 +45,7 @@ struct FileWriter : FFileOutputRenderer {
     
     func write(at point: Point, color: Color<UInt8>) throws {
         func write(_ offset: Int, _ value: UInt8) {
-            image.buffer[point.y + 4 * point.x + offset] = value
+            image.buffer[4 * point.y * size.width + 4 * point.x + offset] = value
         }
         write(0, color.red)
         write(1, color.green)
@@ -107,3 +107,5 @@ struct FileController : FController {
 
 let c = try FileController(path: "/Users/mrwerdo/Desktop/MandelbrotSet.tiff")
 try c.render()
+c.renderer.image.close()
+system("open /Users/mrwerdo/Desktop/MandelbrotSet.tiff")
