@@ -24,7 +24,6 @@ struct MandelbrotSet : FComputer {
 }
 
 struct ModulusColorizer : FColorizer {
-    
     func colorAt(point: Point, value: Int) -> Color<UInt8> {
         let r = UInt8(value % 128)
         let g = UInt8(value % 64)
@@ -59,7 +58,6 @@ struct FileWriter : FFileOutputRenderer {
 }
 
 struct FileController : FController {
-    
     var imageSize: Size
     var diagramFrame: ComplexRect
     var computer: MandelbrotSet
@@ -76,36 +74,13 @@ struct FileController : FController {
         self.colorizer = ModulusColorizer()
         self.renderer = try FileWriter(path: path)
     }
-    func render() throws {
-        print("Started computing mandelbrot points...")
-        let start = Time.now()
-        var loopStart = start
-        let fraction = 1.0 / Double(imageSize.width)
-        let queue = dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_HIGH, 0)
-        
-        for x in 0..<imageSize.width {
-            let times = imageSize.height
-            dispatch_apply(times, queue) { (y) in
-                let point = Point(x, y)
-                let cc = self.cartesianToArgandPlane(point: point)
-                let zvalue = self.computer.computerPoint(C: cc)
-                let color = self.colorizer.colorAt(point: point, value: zvalue)
-                try! self.renderer.write(at: point, color: color)
-            }
-            let percentage = fraction * Double(x)
-            if percentage * 100 == Double(Int(percentage * 100)) {
-                let elapsedTime = Time.difference(then: start)
-                let difference = Time.difference(then: loopStart)
-                print("Percent complete: \(percentage * 100)%\t\twhich took \(elapsedTime) seconds, difference: \(difference)")
-                loopStart = Time.now()
-            }
-        }
-        try renderer.flush()
+    func finish() {
+        try! self.renderer.flush()
+        c.renderer.image.close()
+        system("open \(self.renderer.path)")
     }
 }
 
-
 let c = try FileController(path: "/Users/mrwerdo/Desktop/MandelbrotSet.tiff")
 try c.render()
-c.renderer.image.close()
-system("open /Users/mrwerdo/Desktop/MandelbrotSet.tiff")
+c.finish()

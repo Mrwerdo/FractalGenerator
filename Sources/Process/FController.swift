@@ -9,8 +9,6 @@ import Support
 import Dispatch
 
 public protocol FController {
-    //associatedtype ColorType
-    //associatedtype ZValue
     associatedtype Computer: FComputer
     associatedtype Colorizer: FColorizer
     associatedtype Renderer: FOutputRenderer
@@ -35,5 +33,33 @@ extension FController {
         let imag = tl.imaginary + (Double(point.y) / height) * (br.imaginary - tl.imaginary)
         
         return Complex(real, imag)
+    }
+}
+
+extension FController where Computer.ZValue == Colorizer.ZValue, Colorizer.ColorType == Renderer.ColorType {
+    public func render() throws {
+        print("Started computing mandelbrot points...")
+        let start = Time.now()
+        var loopStart = start
+        let fraction = 1.0 / Double(imageSize.width)
+        let queue = dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_HIGH, 0)
+        
+        for x in 0..<imageSize.width {
+            let times = imageSize.height
+            dispatch_apply(times, queue) { (y) in
+                let point = Point(x, y)
+                let cc = self.cartesianToArgandPlane(point: point)
+                let zvalue = self.computer.computerPoint(C: cc)
+                let color = self.colorizer.colorAt(point: point, value: zvalue)
+                try! self.renderer.write(at: point, color: color)
+            }
+            let percentage = fraction * Double(x)
+            if percentage * 100 == Double(Int(percentage * 100)) {
+                let elapsedTime = Time.difference(then: start)
+                let difference = Time.difference(then: loopStart)
+                print("Percent complete: \(percentage * 100)%\t\twhich took \(elapsedTime) seconds, difference: \(difference)")
+                loopStart = Time.now()
+            }
+        }
     }
 }
