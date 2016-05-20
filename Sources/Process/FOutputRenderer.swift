@@ -16,7 +16,9 @@ public protocol FOutputRenderer {
 }
 
 public protocol FFileOutputRenderer : FOutputRenderer {
+    var path: String { get }
     func flush() throws
+    func close()
 }
 
 extension FOutputRenderer {
