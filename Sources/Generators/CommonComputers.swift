@@ -1,5 +1,5 @@
 // =============================================================================
-// Computers 🖥
+// Common Computers 🖥
 //
 //	Provides common fractal generator functions, such as the mandelbrot set
 //	or the newton's method fractals.
@@ -26,4 +26,22 @@ public struct MandelbrotSet : FComputer {
         return 0
     }
 }
+public struct JuliaSet : FComputer {
+    public var numberOfIterations: Int
+    public var constant: Complex
 
+    public init(numberOfIterations: Int, constant: Complex) {
+        self.numberOfIterations = numberOfIterations
+	self.constant = constant
+    }
+    public func computerPoint(C: Complex) -> Int {
+        var z = C
+        for it in 1...numberOfIterations {
+            z = z*z + constant
+            if modulus(z) > 2 {
+                return it
+            }
+        }
+        return 0
+    }
+}
