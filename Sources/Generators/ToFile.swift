@@ -23,8 +23,8 @@ public struct FileController<Comp: FComputer, Colz: FColorizer, Rend: FFileOutpu
 	}
 
 	public init(_ comp: Comp, _ colz: Colz, _ rend: Rend) throws {
-		self.imageSize = Size(1024, 1024)
-		self.diagramFrame = ComplexRect(Complex(-1, -1), Complex(1, 1))
+		self.imageSize = rend.size
+		self.diagramFrame = ComplexRect(point: Complex(-1, -1), oppositePoint: Complex(1, 1))
 		self.computer = comp
 		self.colorizer = colz
 		self.renderer = rend
@@ -37,12 +37,13 @@ public struct FileController<Comp: FComputer, Colz: FColorizer, Rend: FFileOutpu
 }
 
 public struct FileWriter : FFileOutputRenderer {
-    public var size: Size = Size(1024, 1024)
+    public var size: Size
     public var image: TIFFImage
     public var path: String
 
-    public init(path: String) throws {
+    public init(path: String, size: Size) throws {
         image = try TIFFImage(writeAt: path, nil, size, hasAlpha: true)
+        self.size = size
         self.path = path
     }
     

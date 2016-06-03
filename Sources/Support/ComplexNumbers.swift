@@ -172,48 +172,18 @@ public func cos(theta: Complex) -> Complex {
 
 
 public struct ComplexRect : Equatable, CustomStringConvertible {
-    public var topLeft: Complex = Complex() {
-        didSet {
-            let c1 = topLeft
-            let c2 = bottomRight
-            let tlr = min(c1.real, c2.real)
-            let tli = max(c1.imaginary, c2.imaginary)
-            let brr = max(c1.real, c2.real)
-            let bri = min(c1.imaginary, c2.imaginary)
-//        Avoid runtime recursion
-//            topLeft     = Complex(tlr, tli)
-            bottomRight = Complex(brr, bri)
-            bottomLeft = Complex(tlr, bri)
-            topRight = Complex(brr, tli)
-        }
+    public var topLeft: Complex
+    public var bottomRight: Complex
+    public var bottomLeft: Complex {
+        return Complex(topLeft.real, bottomRight.imaginary)
     }
-    public var bottomRight: Complex = Complex() {
-        didSet {
-            let c1 = topLeft
-            let c2 = bottomRight
-            let tlr = min(c1.real, c2.real)
-            let tli = max(c1.imaginary, c2.imaginary)
-            let brr = max(c1.real, c2.real)
-            let bri = min(c1.imaginary, c2.imaginary)
-            topLeft     = Complex(tlr, tli)
-//        Avoid runtimec recursion
-//            bottomRight = Complex(brr, bri)
-            bottomLeft = Complex(tlr, bri)
-            topRight = Complex(brr, tli)
-        }
+    public var topRight: Complex {
+        return Complex(bottomRight.real, topLeft.imaginary)
     }
-    private(set) var bottomLeft: Complex = Complex()
-    private(set) var topRight: Complex = Complex()
     
-    public init(_ c1: Complex, _ c2: Complex) {
-        let tlr = min(c1.real, c2.real)
-        let tli = max(c1.imaginary, c2.imaginary)
-        let brr = max(c1.real, c2.real)
-        let bri = min(c1.imaginary, c2.imaginary)
-        topLeft     = Complex(tlr, tli)
-        bottomRight = Complex(brr, bri)
-        bottomLeft = Complex(tlr, bri)
-        topRight = Complex(brr, tli)
+    public init(point c1: Complex, oppositePoint c2: Complex) {
+        topLeft = Complex(min(c1.real, c2.real), max(c1.imaginary, c2.imaginary))
+        bottomRight = Complex(max(c1.real, c2.real), min(c1.imaginary, c2.imaginary))
     }
     public var description: String {
         return "tl: \(topLeft), br: \(bottomRight), bl: \(bottomLeft), tr: \(topRight)"

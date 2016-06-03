@@ -28,16 +28,16 @@ public struct MandelbrotSet : FComputer {
 }
 public struct JuliaSet : FComputer {
     public var numberOfIterations: Int
-    public var constant: Complex
-
-    public init(numberOfIterations: Int, constant: Complex) {
+    public var function: (Complex) -> Complex
+    
+    public init(numberOfIterations: Int, function: (Complex) -> Complex) {
         self.numberOfIterations = numberOfIterations
-	self.constant = constant
+        self.function = function
     }
     public func computerPoint(C: Complex) -> Int {
         var z = C
         for it in 1...numberOfIterations {
-            z = z*z + constant
+            z = function(z)
             if modulus(z) > 2 {
                 return it
             }
