@@ -1,12 +1,15 @@
 // =============================================================================
 // FController 🛂
 // 
+//	Contains objects which can output fractals to files.
+// 
 // Written by Andrew Thompson
 // =============================================================================
 
 import Geometry
 import Support
 import Dispatch
+import LibTIFF
 
 public protocol FController {
     associatedtype Computer: FComputer
@@ -42,11 +45,11 @@ extension FController where Computer.ZValue == Colorizer.ZValue, Colorizer.Color
         let start = Time.now()
         var loopStart = start
         let fraction = 1.0 / Double(imageSize.width)
-        let queue = dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_HIGH, 0)
         
         for x in 0..<imageSize.width {
             let times = imageSize.height
-            dispatch_apply(times, queue) { (y) in
+
+            DispatchQueue.concurrentPerform(iterations: times) { (y) in 
                 let point = Point(x, y)
                 let cc = self.cartesianToArgandPlane(point: point)
                 let zvalue = self.computer.computerPoint(C: cc)
@@ -61,5 +64,67 @@ extension FController where Computer.ZValue == Colorizer.ZValue, Colorizer.Color
                 loopStart = Time.now()
             }
         }
+    }
+}
+
+
+public struct FileController<Comp: FComputer, Colz: FColorizer, Rend: FFileOutputRenderer where Colz.ZValue == Comp.ZValue, Colz.ColorType == Rend.ColorType> : FController {
+	public var imageSize: Size {
+        get {
+            return renderer.size
+        }
+        set {
+            renderer.size = newValue
+        }
+    }
+	public var diagramFrame: ComplexRect
+	public var computer: Comp
+	public var colorizer: Colz
+	public var renderer: Rend
+
+	public var path: String {
+		return renderer.path
+	}
+
+	public init(_ comp: Comp, _ colz: Colz, _ rend: Rend) throws {
+		self.diagramFrame = ComplexRect(point: Complex(-1, -1), oppositePoint: Complex(1, 1))
+		self.computer = comp
+		self.colorizer = colz
+		self.renderer = rend
+		self.imageSize = rend.size
+	}
+
+	public func finish() {
+		try! self.renderer.flush()
+		self.renderer.close()
+	}
+}
+
+public struct FileWriter : FFileOutputRenderer {
+    public var size: Size
+    public var image: TIFFImage
+    public var path: String
+
+    public init(path: String, size: Size) throws {
+        image = try TIFFImage(writingAt: path, size: size, hasAlpha: true)
+        self.size = size
+        self.path = path
+    }
+    
+    public func write(at point: Point, color: Color<UInt8>) throws {
+        func write(_ offset: Int, _ value: UInt8) {
+            image.buffer[4 * point.y * size.width + 4 * point.x + offset] = value
+        }
+        write(0, color.red)
+        write(1, color.green)
+        write(2, color.blue)
+        write(3, color.alpha)
+    }
+    
+    public func flush() throws {
+        try image.write()
+    }
+    public func close() {
+        image.close()
     }
 }
