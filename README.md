@@ -12,3 +12,7 @@ To install, clone the repository, then build it.
     $ swift build
     $ .build/debug/Sample # this runs the sample created
 
+# Requirements
+
+Latest version of swift (3.0) & Xcode 8 Beta. This may mean that you need to
+fiddle with the code before it works.
