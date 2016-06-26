@@ -7,8 +7,8 @@ Feel free to fork my project and start creating your own!
 You must use the swift package manager, and the latest build of swift 3.0.
 To install, clone the repository, then build it.
 
-    $ git clone https://github.com/mrwerdo/demfractals
-    $ cd demfractals
+    $ git clone https://github.com/mrwerdo/FractalGenerator.git
+    $ cd FractalGenerator
     $ swift build
     $ .build/debug/Sample # this runs the sample created
 
