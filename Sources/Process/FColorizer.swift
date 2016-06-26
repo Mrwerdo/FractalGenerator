@@ -16,13 +16,13 @@ public protocol FColorizer {
 	func colorAt(point: Point, value: ZValue) -> Color<ColorType>
 }
 
-public struct ModulusColorizer : FColorizer {
+public struct ModulusColorizerUInt8 : FColorizer {
     public var redMax: UInt8
     public var greenMax: UInt8
     public var blueMax: UInt8
 
     public init(rmax: UInt8 = 128, gmax: UInt8 = 64, bmax: UInt8 = 32) {
-    	self.redMax = rmax
+        self.redMax = rmax
         self.greenMax = gmax
         self.blueMax = bmax
     }

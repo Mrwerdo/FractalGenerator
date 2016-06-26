@@ -67,7 +67,6 @@ extension FController where Computer.ZValue == Colorizer.ZValue, Colorizer.Color
     }
 }
 
-
 public struct FileController<Comp: FComputer, Colz: FColorizer, Rend: FFileOutputRenderer where Colz.ZValue == Comp.ZValue, Colz.ColorType == Rend.ColorType> : FController {
 	public var imageSize: Size {
         get {
@@ -100,9 +99,9 @@ public struct FileController<Comp: FComputer, Colz: FColorizer, Rend: FFileOutpu
 	}
 }
 
-public struct FileWriter : FFileOutputRenderer {
+public struct FileWriter<Channel> : FFileOutputRenderer {
     public var size: Size
-    public var image: TIFFImage
+    public var image: TIFFImage<Channel>
     public var path: String
 
     public init(path: String, size: Size) throws {
@@ -111,8 +110,8 @@ public struct FileWriter : FFileOutputRenderer {
         self.path = path
     }
     
-    public func write(at point: Point, color: Color<UInt8>) throws {
-        func write(_ offset: Int, _ value: UInt8) {
+    public func write(at point: Point, color: Color<Channel>) throws {
+        func write(_ offset: Int, _ value: Channel) {
             image.buffer[4 * point.y * size.width + 4 * point.x + offset] = value
         }
         write(0, color.red)

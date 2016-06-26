@@ -7,6 +7,6 @@ let pacakge = Package(
 		Target(name: "Process", dependencies: ["Support"]),
 		Target(name: "Sample", dependencies: ["Support", "Process"])
 	],
-	dependencies: [.Package(url: "https://github.com/Mrwerdo/LibTIFF.git", majorVersion: 0, minor: 1)],
+	dependencies: [.Package(url: "https://github.com/Mrwerdo/LibTIFF.git", majorVersion: 0, minor: 2)],
 	exclude: ["Sources", "LICENCE", "README.md", "Fractal.tiff"]
 )
