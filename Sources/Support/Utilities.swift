@@ -11,15 +11,16 @@
 #endif
 
 public struct Time {
-	public static func now() -> time_t {
-		var t = time_t()
-		time(&t)
-		return t
-	}
-	public static func difference(then: time_t) -> time_t {
-		let n = Time.now()
-		return n - then
-	}
+    var x: Int
+    public static func now() -> time_t {
+        var t = time_t()
+        time(&t)
+        return t
+    }
+    public static func difference(then: time_t) -> time_t {
+        let n = Time.now()
+        return n - then
+    }
 }
 
 // =============================================================================
@@ -28,24 +29,27 @@ public struct Time {
 
 #if os(OSX)
 
-import Foundation
+import Cocoa
 
 extension NSURL {
 	enum FileErrors : ErrorProtocol {
 		case CouldNotMakeUniqueFilename
 	}
 
-	convenience init(uniqueName name: String, type: String, version: String, base: NSURL) throws {
-		let fm = FileManager()
-		let filedir = base.appendingPathComponent(name)!.path!
-		var uniqueNumber = 0
-		var path = filedir + "\(uniqueNumber)" + "\(version)" + type
-		while fm.fileExists(atPath: path) {
-			uniqueNumber += 1
-			path = filedir + "\(uniqueNumber)" + "\(version)" + type
-		}
-		self.init(fileURLWithPath: path)
-	}
+	convenience init(uniqueName name: String, 
+                   type: String, 
+                   version: String, 
+                   base: NSURL) throws {
+        let fm = FileManager()
+        let filedir = base.appendingPathComponent(name)!.path!
+        var uniqueNumber = 0
+        var path = filedir + "\(uniqueNumber)" + "\(version)" + type
+        while fm.fileExists(atPath: path) {
+            uniqueNumber += 1
+            path = filedir + "\(uniqueNumber)" + "\(version)" + type
+        }
+        self.init(fileURLWithPath: path)
+    }
 }
 
 #endif // #if os(OSX)
