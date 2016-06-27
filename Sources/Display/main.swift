@@ -30,18 +30,6 @@ public struct ModulusColorizerUInt32 : FColorizer {
 }
 
 let colorizer = ModulusColorizerUInt32(rmax: 64, gmax: 4, bmax: 64)
-// let fileWriter = try FileWriter<UInt32>(path: "/Users/mrwerdo/Desktop/Image.tiff", size: Size(4000, 4000))
-// 
-// try fileWriter.image.attributes.set(tag: 281, with: UInt32.max)
-// try fileWriter.image.attributes.set(tag: 280, with: UInt32.min)
-// 
-// var c = try FileController(mandelbrotSet, colorizer, fileWriter)
-// c.diagramFrame = ComplexRect(point: Complex(-2, -2), oppositePoint: Complex(2, 2))
-// try c.render()
-// c.finish()
-// print(c.path)
-
-
 let frame = CGRect(x: 100, y: 100, width: 400, height: 300)
 let app = FAppDelegate(frame: frame)
 let v = FViewController("MandelbrotSet", frame, mandelbrotSet, colorizer)

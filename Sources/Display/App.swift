@@ -3,45 +3,26 @@ import Cocoa
 
 class FAppDelegate: NSObject, NSApplicationDelegate {
     var window: NSWindow!
-
     var controller: NSViewController!
+    var initialFrame: CGRect
 
-    func applicationDidFinishLaunching(aNotification: NSNotification) {
-        print("did finish launching")
-    }
-
-    init(processName: String = "The Fractal Generator", 
-         frame: CGRect) {
+    init(processName: String = "The Fractal Generator", frame: CGRect) {
+        setprogname(processName)
+        initialFrame = frame
         super.init()
     }
 
-    func makeWindow() -> NSWindow {
-        window = NSWindow(contentRect: CGRect(x: 0, y: 0, width: 400, height: 300),
-                          styleMask: NSResizableWindowMask,
-                          backing: NSBackingStoreType.buffered,
-                          defer: false)
-
-        print("adding view")
-        let content = window!.contentView! as NSView
-        let view = controller.view
-        content.addSubview(view)
-        print("returning window")
-        return window
-    }
-
     func run() {
-        print("running")
         let app = NSApplication.shared()
-        print("\(#function)")
         app.delegate = self
-        print("\(#function)")
-        let w = makeWindow()
-        print("after make window")
-        print("\(#function)")
-        w.makeKeyAndOrderFront(nil)
-        print("\(#function)")
+        window = NSWindow(contentRect: initialFrame, 
+                            styleMask: NSWindowStyleMask.fullSizeContentView,
+                            backing: NSBackingStoreType.buffered,
+                            defer: false)
+        window.contentView!.addSubview(controller.view)
+        window.isMovableByWindowBackground = true
+        window.makeKeyAndOrderFront(nil)
         app.activateIgnoringOtherApps(false)
-        print("\(#function)")
         app.run()
     }
 }
@@ -59,23 +40,21 @@ class FViewController<ColorType, Cm: FComputer, Cl: FColorizer where Cm.ZValue =
         self.colorizer = k
         self.imageName = im
 
-        print("\(#function)")
-
         super.init(nibName: nil, bundle: nil)!
-        print("\(#function)")
     }
 
     override func loadView() {
-        print("\(#function)")
         let view = NSView(frame: CGRect(origin: CGPoint(), size: initialFrame.size))
         view.wantsLayer = true
         view.layer?.borderWidth = 2
         view.layer?.borderColor = NSColor.red().cgColor
         self.view = view
-        print("\(#function)")
     }
 
     override func viewDidAppear() {
-        Swift.print("view appeared")
+        // Do stuff here.
+    }
+    override func viewWillAppear() {
+        // And here.
     }
 }
