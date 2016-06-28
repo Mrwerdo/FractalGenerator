@@ -32,6 +32,6 @@ public struct ModulusColorizerUInt32 : FColorizer {
 let colorizer = ModulusColorizerUInt8(rmax: 64, gmax: 4, bmax: 64)
 let frame = CGRect(x: 100, y: 100, width: 400, height: 400)
 let app = FAppDelegate(frame: frame)
-let v = FViewController("MandelbrotSet", frame, mandelbrotSet, colorizer) { CGFloat($0) / CGFloat(UInt8.max) }
+let v = FViewController("MandelbrotSet", frame, mandelbrotSet, colorizer)
 app.controller = v
 app.run()
