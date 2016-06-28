@@ -24,6 +24,7 @@ class FAppDelegate: NSObject, NSApplicationDelegate {
         window.contentView!.addSubview(controller.view)
         window.isMovableByWindowBackground = true
         window.makeKeyAndOrderFront(nil)
+        window.center()
         app.activateIgnoringOtherApps(false)
         app.run()
     }
@@ -34,16 +35,13 @@ class FView<ColorType> : NSImageView, FOutputRenderer {
     var size: Size
     var bitmapRep: NSBitmapImageRep
 
+    override var mouseDownCanMoveWindow: Bool {
+        return true
+    }
+
     override init(frame: CGRect) {
         size = Size(Int(frame.width), Int(frame.height))
         let bps = strideof(ColorType)
-        let format = NSBitmapFormat.alphaNonpremultiplied
-        Swift.print(ColorType)
-        Swift.print(bps)
-        Swift.print(size)
-        Swift.print(NSDeviceRGBColorSpace)
-        Swift.print(format)
-        Swift.print(bps * size.width)
         let rep = NSBitmapImageRep(bitmapDataPlanes: nil,
                                     pixelsWide: size.width,
                                     pixelsHigh: size.height,
@@ -52,14 +50,33 @@ class FView<ColorType> : NSImageView, FOutputRenderer {
                                     hasAlpha: true,
                                     isPlanar: false,
                                     colorSpaceName: NSDeviceRGBColorSpace,
-                                    bitmapFormat: format,
                                     bytesPerRow: 0, 
                                     bitsPerPixel: 0)
         bitmapRep = rep!
+        
         super.init(frame: frame)
         let image = NSImage(size: frame.size)
         image.addRepresentation(bitmapRep)
         self.image = image
+        initalizeToBlack()
+    }
+
+
+    func initalizeToBlack() {
+        // every 4 * strideof(ColorType) bytes we want to set
+        // to be 100%, as this is the alpha channel.
+        var c = 3 * strideof(ColorType)
+        let step = 4 * strideof(ColorType)
+        let count = size.width * size.height * 4 * strideof(ColorType)
+        let ptr = bitmapRep.bitmapData!
+        while c < count {
+            var k = 0
+            while k < strideof(ColorType) {
+                ptr[c + k] = 0xFF
+                k += 1
+            }
+            c += step
+        }
     }
 
     required init(coder acoder: NSCoder) {
@@ -67,12 +84,13 @@ class FView<ColorType> : NSImageView, FOutputRenderer {
     }
 
     func write(at point: Point, color: Color<ColorType>) throws {
-        func set(pixel: UnsafePointer<ColorType>) {
-            bitmapRep.setPixel(UnsafeMutablePointer<Int>(pixel), atX: point.x, y: point.y)
-        }
+        let ptr = UnsafeMutablePointer<ColorType>(bitmapRep.bitmapData)!
+        let index = point.y * size.width * 4 + point.x * 4
+        ptr[index + 0] = color.red
+        ptr[index + 1] = color.green
+        ptr[index + 2] = color.blue
+        ptr[index + 3] = color.alpha
 
-        var pixel = [color.red, color.green, color.blue, color.alpha]
-        set(pixel: &pixel)
         DispatchQueue.main.async {
             self.needsDisplay = true
         }
@@ -136,8 +154,6 @@ class FViewController<ColorType, Cm: FComputer, Cl: FColorizer where Cm.ZValue =
                     self.render(point: p)
                 } 
             }
-            print("finished")
         }
-        print("returning")
     }
 }
