@@ -8,11 +8,11 @@ func **(lhs: Int, rhs: Int) -> Int {
 }
 
 func af(Z: Complex) -> Complex {
-    return Z*Z + Complex(0.835,-0.2321)
+    return Z*Z + Complex(1,-0.2321)
 }
 
 func bf(Z: Complex) -> Complex {
-    return Z*Z + 0.279
+    return Z + 0.279
 }
 
 struct Zipper : FComputer {
@@ -26,18 +26,17 @@ struct Zipper : FComputer {
         bc = JuliaSet(numberOfIterations: numberOfIterations, function: bf)
     }
 
-    func computerPoint(C: Complex) -> Int {
-        let a = ac.computerPoint(C: C)
-        let b = bc.computerPoint(C: C)
-        return Int(abs(Double(b)*Double(a) - pow(Double(a),Double(b)*0.02)))
+    func computerPoint(C: Complex) -> UInt {
+        let a = Double(ac.computerPoint(C: C))
+        let b = Double(bc.computerPoint(C: C))
+        return UInt(abs(Double(abs(a-b))/Double(abs(b-a)+1))*100)
     }
 }
 
-let mandelbrotSet = Zipper(numberOfIterations: 4000)
-
+let mandelbrotSet = MandelbrotSet(numberOfIterations: 4000)
 
 public struct ModulusColorizerCGFloat: FColorizer {
-    public typealias Channel = UInt16
+    public typealias Channel = UInt8
     public var redMax: Channel
     public var greenMax: Channel
     public var blueMax: Channel
@@ -49,10 +48,10 @@ public struct ModulusColorizerCGFloat: FColorizer {
     }
 
     public func colorAt(point: Point, value: Int) -> Color<Channel> {
-        let r = Channel(value % (2**8)) * Channel(2**8)
-        let g = Channel(value % (2**6)) * Channel(2**10)
-        let b = Channel(value % (2**4)) * Channel(2**12)
-        return Color(r, g, b, Channel(2**16 - 1))
+        let r = Channel(value % (2**6)) * Channel(2**2)
+        let g = Channel(value % (2**4)) * Channel(2**4)
+        let b = Channel(value % (2**2)) * Channel(2**6)
+        return Color(r, g, b, Channel(2**8 - 1))
     }
 }
 

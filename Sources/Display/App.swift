@@ -121,6 +121,7 @@ class FViewController<ColorType, Cm: FComputer, Cl: FColorizer where Cm.ZValue =
             self.view.frame.size.height = CGFloat(newValue.height)
         }
     }
+    var file: FileWriter<ColorType>
 
     init(_ im: String, _ f: CGRect, _ c: Cm, _ k: Cl) {
         self.initialFrame = f
@@ -128,7 +129,8 @@ class FViewController<ColorType, Cm: FComputer, Cl: FColorizer where Cm.ZValue =
         self.colorizer = k
         self.imageName = im
         self.diagramFrame = ComplexRect(point: Complex(-2, -2), oppositePoint: Complex(2, 2))
-
+        let size = Size(Int(f.width), Int(f.height))
+        self.file = try! FileWriter<ColorType>(path: "/Users/mrwerdo/Desktop/image.tiff", size: size)
         super.init(nibName: nil, bundle: nil)!
     }
 
@@ -137,6 +139,7 @@ class FViewController<ColorType, Cm: FComputer, Cl: FColorizer where Cm.ZValue =
         let zvalue = self.computer.computerPoint(C: cc)
         let color = colorizer.colorAt(point: point, value: zvalue)
 
+        try! self.file.write(at: point, color: color)
         try! self.renderer.write(at: point, color: color)
     }
     
@@ -154,6 +157,8 @@ class FViewController<ColorType, Cm: FComputer, Cl: FColorizer where Cm.ZValue =
                     self.render(point: p)
                 } 
             }
+            try! self.file.flush()
+            self.file.close()
         }
     }
 }

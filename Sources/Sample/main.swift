@@ -34,11 +34,11 @@ public struct ModulusColorizerUInt32 : FColorizer {
     }
 }
 
-let colorizer = ModulusColorizerUInt32(rmax: 64, gmax: 4, bmax: 64)
-let fileWriter = try FileWriter<UInt32>(path: "/Users/mrwerdo/Desktop/Image.tiff", size: Size(4000, 4000))
+let colorizer = ModulusColorizerUInt8(rmax: 64, gmax: 4, bmax: 64)
+let fileWriter = try FileWriter<UInt8>(path: "/Users/mrwerdo/Desktop/Image.tiff", size: Size(4000, 4000))
 
-try fileWriter.image.attributes.set(tag: 281, with: UInt32.max)
-try fileWriter.image.attributes.set(tag: 280, with: UInt32.min)
+//try fileWriter.image.attributes.set(tag: 281, with: UInt32.max)
+//try fileWriter.image.attributes.set(tag: 280, with: UInt32.min)
 
 var c = try FileController(mandelbrotSet, colorizer, fileWriter)
 c.diagramFrame = ComplexRect(point: Complex(-2, -2), oppositePoint: Complex(2, 2))
