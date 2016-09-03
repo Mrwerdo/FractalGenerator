@@ -36,7 +36,7 @@ public struct JuliaSet : FComputer {
     public var numberOfIterations: Int
     public var function: (Complex) -> Complex
     
-    public init(numberOfIterations: Int, function: (Complex) -> Complex) {
+    public init(numberOfIterations: Int, function: @escaping (Complex) -> Complex) {
         self.numberOfIterations = numberOfIterations
         self.function = function
     }

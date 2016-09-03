@@ -29,7 +29,8 @@ struct Zipper : FComputer {
     func computerPoint(C: Complex) -> UInt {
         let a = Double(ac.computerPoint(C: C))
         let b = Double(bc.computerPoint(C: C))
-        return UInt(abs(Double(abs(a-b))/Double(abs(b-a)+1))*100)
+        let c = (Double(abs(a-b))/Double(abs(b-a)+1))
+        return UInt(abs(c) * 100)
     }
 }
 
@@ -47,7 +48,7 @@ public struct ModulusColorizerCGFloat: FColorizer {
         self.blueMax = bmax
     }
 
-    public func colorAt(point: Point, value: Int) -> Color<Channel> {
+    public func colorAt(point: Point2D, value: Int) -> Color<Channel> {
         let r = Channel(value % (2**6)) * Channel(2**2)
         let g = Channel(value % (2**4)) * Channel(2**4)
         let b = Channel(value % (2**2)) * Channel(2**6)

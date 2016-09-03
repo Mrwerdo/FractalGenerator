@@ -10,12 +10,12 @@ class DataBuffer<Type> {
 
     init(count: Int, initialValue: Type) {
         self.count = count
-        data = UnsafeMutablePointer<Type>(allocatingCapacity: count)
-        data.initialize(with: initialValue, count: count)
+        data = UnsafeMutablePointer<Type>.allocate(capacity: count)
+        data.initialize(to: initialValue, count: count)
     }
     deinit {
         data.deinitialize(count: count)
-        data.deallocateCapacity(count)
+        data.deallocate(capacity: count)
     }
 
     var range: Range<Int> {

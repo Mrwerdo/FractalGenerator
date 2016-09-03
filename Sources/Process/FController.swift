@@ -25,7 +25,7 @@ public protocol FController {
 }
 
 extension FController {
-    public func cartesianToArgandPlane(point: Point) -> Complex {
+    public func cartesianToArgandPlane(point: Point2D) -> Complex {
         
         let tl = diagramFrame.topLeft
         let br = diagramFrame.bottomRight
@@ -50,7 +50,7 @@ extension FController where Computer.ZValue == Colorizer.ZValue, Colorizer.Color
             let times = imageSize.height
 
             DispatchQueue.concurrentPerform(iterations: times) { (y) in 
-                let point = Point(x, y)
+                let point = Point2D(x, y)
                 let cc = self.cartesianToArgandPlane(point: point)
                 let zvalue = self.computer.computerPoint(C: cc)
                 let color = self.colorizer.colorAt(point: point, value: zvalue)
@@ -67,7 +67,7 @@ extension FController where Computer.ZValue == Colorizer.ZValue, Colorizer.Color
     }
 }
 
-public struct FileController<Comp: FComputer, Colz: FColorizer, Rend: FFileOutputRenderer where Colz.ZValue == Comp.ZValue, Colz.ColorType == Rend.ColorType> : FController {
+public struct FileController<Comp: FComputer, Colz: FColorizer, Rend: FFileOutputRenderer> : FController where Colz.ZValue == Comp.ZValue, Colz.ColorType == Rend.ColorType {
 	public var imageSize: Size {
         get {
             return renderer.size
@@ -110,7 +110,7 @@ public struct FileWriter<Channel> : FFileOutputRenderer {
         self.path = path
     }
     
-    public func write(at point: Point, color: Color<Channel>) throws {
+    public func write(at point: Point2D, color: Color<Channel>) throws {
         func write(_ offset: Int, _ value: Channel) {
             image.buffer[4 * point.y * size.width + 4 * point.x + offset] = value
         }

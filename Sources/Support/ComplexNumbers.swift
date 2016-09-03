@@ -129,7 +129,7 @@ public func pow(_ base: Complex, _ n: Double) -> Complex {
     return Complex(real, imaginary)
 }
 
-infix operator ** { associativity left precedence 160 }
+infix operator ** : MultiplicationPrecedence
 public func **(base: Complex, n: Double) -> Complex {
     return pow(base, n)
 }

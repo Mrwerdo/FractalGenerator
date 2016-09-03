@@ -49,7 +49,7 @@ public struct ColorBuffer<DataType> {
 
 public struct ColorBufferGenerator<DataType> : IteratorProtocol { 
 	public var nextIndex: () -> Color<DataType>?
-	public init(_ method: () -> Color<DataType>?) {
+	public init(_ method: @escaping () -> Color<DataType>?) {
 		self.nextIndex = method
 	}
 

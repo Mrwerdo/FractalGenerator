@@ -26,7 +26,7 @@ public struct ModulusColorizerUInt32 : FColorizer {
         self.blueMax = bmax
     }
 
-    public func colorAt(point: Point, value: Int) -> Color<Channel> {
+    public func colorAt(point: Point2D, value: Int) -> Color<Channel> {
         let r = Channel(value % (2**7)) * UInt32(2**13)
         let g = Channel(value % (2**4)) * UInt32(2**16)
         let b = Channel(value % (2**16)) * UInt32(2**4)
@@ -45,3 +45,4 @@ c.diagramFrame = ComplexRect(point: Complex(-2, -2), oppositePoint: Complex(2, 2
 try c.render()
 c.finish()
 print(c.path)
+ 

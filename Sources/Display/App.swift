@@ -25,7 +25,7 @@ class FAppDelegate: NSObject, NSApplicationDelegate {
         window.isMovableByWindowBackground = true
         window.makeKeyAndOrderFront(nil)
         window.center()
-        app.activateIgnoringOtherApps(false)
+        app.activate(ignoringOtherApps: false)
         app.run()
     }
 }
@@ -41,7 +41,7 @@ class FView<ColorType> : NSImageView, FOutputRenderer {
 
     override init(frame: CGRect) {
         size = Size(Int(frame.width), Int(frame.height))
-        let bps = strideof(ColorType)
+        let bps = MemoryLayout<ColorType>.stride
         let rep = NSBitmapImageRep(bitmapDataPlanes: nil,
                                     pixelsWide: size.width,
                                     pixelsHigh: size.height,
@@ -65,13 +65,13 @@ class FView<ColorType> : NSImageView, FOutputRenderer {
     func initalizeToBlack() {
         // every 4 * strideof(ColorType) bytes we want to set
         // to be 100%, as this is the alpha channel.
-        var c = 3 * strideof(ColorType)
-        let step = 4 * strideof(ColorType)
-        let count = size.width * size.height * 4 * strideof(ColorType)
+        var c = 3 * MemoryLayout<ColorType>.stride
+        let step = 4 * MemoryLayout<ColorType>.stride
+        let count = size.width * size.height * 4 * MemoryLayout<ColorType>.stride
         let ptr = bitmapRep.bitmapData!
         while c < count {
             var k = 0
-            while k < strideof(ColorType) {
+            while k < MemoryLayout<ColorType>.stride {
                 ptr[c + k] = 0xFF
                 k += 1
             }
@@ -83,21 +83,24 @@ class FView<ColorType> : NSImageView, FOutputRenderer {
         fatalError("not implemented")
     }
 
-    func write(at point: Point, color: Color<ColorType>) throws {
-        let ptr = UnsafeMutablePointer<ColorType>(bitmapRep.bitmapData)!
-        let index = point.y * size.width * 4 + point.x * 4
-        ptr[index + 0] = color.red
-        ptr[index + 1] = color.green
-        ptr[index + 2] = color.blue
-        ptr[index + 3] = color.alpha
+    func write(at point: Point2D, color: Color<ColorType>) throws {
 
-        DispatchQueue.main.async {
-            self.needsDisplay = true
+        let k = MemoryLayout<ColorType>.size
+        bitmapRep.bitmapData?.withMemoryRebound(to: ColorType.self, capacity: k) { ptr in
+            let index = point.y * size.width * 4 + point.x * 4
+            ptr[index + 0] = color.red
+            ptr[index + 1] = color.green
+            ptr[index + 2] = color.blue
+            ptr[index + 3] = color.alpha
+            
+            DispatchQueue.main.async {
+                self.needsDisplay = true
+            }
         }
     }
 }
 
-class FViewController<ColorType, Cm: FComputer, Cl: FColorizer where Cm.ZValue == Cl.ZValue, Cl.ColorType == ColorType>: NSViewController, FController {
+class FViewController<ColorType, Cm: FComputer, Cl: FColorizer>: NSViewController, FController where Cm.ZValue == Cl.ZValue, Cl.ColorType == ColorType {
 
     var imageName: String
     var computer: Cm
@@ -134,7 +137,11 @@ class FViewController<ColorType, Cm: FComputer, Cl: FColorizer where Cm.ZValue =
         super.init(nibName: nil, bundle: nil)!
     }
 
-    func render(point: Point) {
+    required init(coder: NSCoder) {
+        fatalError("not implemented")
+    }
+
+    func render(point: Point2D) {
         let cc = self.cartesianToArgandPlane(point: point)
         let zvalue = self.computer.computerPoint(C: cc)
         let color = colorizer.colorAt(point: point, value: zvalue)
@@ -149,11 +156,12 @@ class FViewController<ColorType, Cm: FComputer, Cl: FColorizer where Cm.ZValue =
     }
 
     override func viewDidAppear() {
-        let queue = DispatchQueue.global(attributes: DispatchQueue.GlobalAttributes.qosDefault)
+        
+        let queue = DispatchQueue.global(qos: .default)
         queue.async {
             for y in 0..<self.imageSize.height {
                 for x in 0..<self.imageSize.width {
-                    let p = Point(x, y)
+                    let p = Point2D(x, y)
                     self.render(point: p)
                 } 
             }

@@ -13,7 +13,7 @@ import Support
 public protocol FColorizer {
 	associatedtype ColorType
 	associatedtype ZValue
-	func colorAt(point: Point, value: ZValue) -> Color<ColorType>
+	func colorAt(point: Point2D, value: ZValue) -> Color<ColorType>
 }
 
 public struct ModulusColorizerUInt8 : FColorizer {
@@ -27,7 +27,7 @@ public struct ModulusColorizerUInt8 : FColorizer {
         self.blueMax = bmax
     }
 
-    public func colorAt(point: Point, value: Int) -> Color<UInt8> {
+    public func colorAt(point: Point2D, value: Int) -> Color<UInt8> {
         let r = UInt8(value % 128) * 2
         let g = UInt8(value % 64) * 4
         let b = UInt8(value % 32) * 8

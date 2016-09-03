@@ -32,7 +32,7 @@ public struct Time {
 import Cocoa
 
 extension NSURL {
-	enum FileErrors : ErrorProtocol {
+	enum FileErrors : Error {
 		case CouldNotMakeUniqueFilename
 	}
 
@@ -41,7 +41,7 @@ extension NSURL {
                    version: String, 
                    base: NSURL) throws {
         let fm = FileManager()
-        let filedir = base.appendingPathComponent(name)!.path!
+        let filedir = base.appendingPathComponent(name)!.path
         var uniqueNumber = 0
         var path = filedir + "\(uniqueNumber)" + "\(version)" + type
         while fm.fileExists(atPath: path) {
