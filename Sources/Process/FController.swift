@@ -16,7 +16,7 @@ public protocol FController {
     associatedtype Colorizer: FColorizer
     associatedtype Renderer: FOutputRenderer
     
-    var imageSize: Size { get set }
+    var imageSize: Size2D { get set }
     var diagramFrame: ComplexRect { get set }
     
     var computer: Computer { get set }
@@ -50,7 +50,7 @@ extension FController where Computer.ZValue == Colorizer.ZValue, Colorizer.Color
             let times = imageSize.height
 
             DispatchQueue.concurrentPerform(iterations: times) { (y) in 
-                let point = Point2D(x, y)
+                let point = Point2D(x: x, y: y)
                 let cc = self.cartesianToArgandPlane(point: point)
                 let zvalue = self.computer.computerPoint(C: cc)
                 let color = self.colorizer.colorAt(point: point, value: zvalue)
@@ -68,7 +68,7 @@ extension FController where Computer.ZValue == Colorizer.ZValue, Colorizer.Color
 }
 
 public struct FileController<Comp: FComputer, Colz: FColorizer, Rend: FFileOutputRenderer> : FController where Colz.ZValue == Comp.ZValue, Colz.ColorType == Rend.ColorType {
-	public var imageSize: Size {
+	public var imageSize: Size2D {
         get {
             return renderer.size
         }
@@ -100,11 +100,11 @@ public struct FileController<Comp: FComputer, Colz: FColorizer, Rend: FFileOutpu
 }
 
 public struct FileWriter<Channel> : FFileOutputRenderer {
-    public var size: Size
+    public var size: Size2D
     public var image: TIFFImage<Channel>
     public var path: String
 
-    public init(path: String, size: Size) throws {
+    public init(path: String, size: Size2D) throws {
         image = try TIFFImage(writingAt: path, size: size, hasAlpha: true)
         self.size = size
         self.path = path

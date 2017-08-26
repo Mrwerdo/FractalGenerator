@@ -15,11 +15,11 @@ class FAppDelegate: NSObject, NSApplicationDelegate {
     }
 
     func run() {
-        let app = NSApplication.shared()
+        let app = NSApplication.shared
         app.delegate = self
         window = NSWindow(contentRect: initialFrame, 
-                            styleMask: NSWindowStyleMask.fullSizeContentView,
-                            backing: NSBackingStoreType.buffered,
+                            styleMask: NSWindow.StyleMask.fullSizeContentView,
+                            backing: NSWindow.BackingStoreType.buffered,
                             defer: false)
         window.contentView!.addSubview(controller.view)
         window.isMovableByWindowBackground = true
@@ -32,7 +32,7 @@ class FAppDelegate: NSObject, NSApplicationDelegate {
 
 class FView<ColorType> : NSImageView, FOutputRenderer {
 
-    var size: Size
+    var size: Size2D
     var bitmapRep: NSBitmapImageRep
 
     override var mouseDownCanMoveWindow: Bool {
@@ -40,7 +40,7 @@ class FView<ColorType> : NSImageView, FOutputRenderer {
     }
 
     override init(frame: CGRect) {
-        size = Size(Int(frame.width), Int(frame.height))
+        size = Size2D(width: Int(frame.width), height: Int(frame.height))
         let bps = MemoryLayout<ColorType>.stride
         let rep = NSBitmapImageRep(bitmapDataPlanes: nil,
                                     pixelsWide: size.width,
@@ -49,7 +49,7 @@ class FView<ColorType> : NSImageView, FOutputRenderer {
                                     samplesPerPixel: 4,
                                     hasAlpha: true,
                                     isPlanar: false,
-                                    colorSpaceName: NSDeviceRGBColorSpace,
+                                    colorSpaceName: NSColorSpaceName.deviceRGB,
                                     bytesPerRow: 0, 
                                     bitsPerPixel: 0)
         bitmapRep = rep!
@@ -113,11 +113,11 @@ class FViewController<ColorType, Cm: FComputer, Cl: FColorizer>: NSViewControlle
     }
     var initialFrame: CGRect
     var diagramFrame: ComplexRect
-    var imageSize: Size {
+    var imageSize: Size2D {
         get {
             let w = frame.width
             let h = frame.height
-            return Size(Int(w), Int(h))
+            return Size2D(width: Int(w), height: Int(h))
         }
         set {
             self.view.frame.size.width = CGFloat(newValue.width)
@@ -132,9 +132,9 @@ class FViewController<ColorType, Cm: FComputer, Cl: FColorizer>: NSViewControlle
         self.colorizer = k
         self.imageName = im
         self.diagramFrame = ComplexRect(point: Complex(-2, -2), oppositePoint: Complex(2, 2))
-        let size = Size(Int(f.width), Int(f.height))
+        let size = Size2D(width: Int(f.width), height: Int(f.height))
         self.file = try! FileWriter<ColorType>(path: "/Users/mrwerdo/Desktop/image.tiff", size: size)
-        super.init(nibName: nil, bundle: nil)!
+        super.init(nibName: nil, bundle: nil)
     }
 
     required init(coder: NSCoder) {
@@ -161,7 +161,7 @@ class FViewController<ColorType, Cm: FComputer, Cl: FColorizer>: NSViewControlle
         queue.async {
             for y in 0..<self.imageSize.height {
                 for x in 0..<self.imageSize.width {
-                    let p = Point2D(x, y)
+                    let p = Point2D(x: x, y: y)
                     self.render(point: p)
                 } 
             }

@@ -35,7 +35,7 @@ public struct ModulusColorizerUInt32 : FColorizer {
 }
 
 let colorizer = ModulusColorizerUInt8(rmax: 64, gmax: 4, bmax: 64)
-let fileWriter = try FileWriter<UInt8>(path: "/Users/mrwerdo/Desktop/Image.tiff", size: Size(4000, 4000))
+let fileWriter = try FileWriter<UInt8>(path: "/Users/mrwerdo/Desktop/Image.tiff", size: Size2D(width: 4000, height: 4000))
 
 //try fileWriter.image.attributes.set(tag: 281, with: UInt32.max)
 //try fileWriter.image.attributes.set(tag: 280, with: UInt32.min)
