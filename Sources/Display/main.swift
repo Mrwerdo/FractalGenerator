@@ -157,14 +157,13 @@ class ViewController: NSViewController, MTKViewDelegate {
     var mandelbrotPipelineState: MTLComputePipelineState!
     var floatTexturePageA: MTLTexture!
     var floatTexturePageB: MTLTexture!
-    var computationStatePageA: MTLTexture!
-    var computationStatePageB: MTLTexture!
     var alphaBuffer: MTLBuffer!
     let maxIterations: UInt32 = 1000
     var alphaCounter: UInt32 = 0 {
         didSet {
             if alphaCounter >= maxIterations {
                 mview.isPaused = true
+                print("done")
             }
         }
     }
@@ -200,14 +199,6 @@ class ViewController: NSViewController, MTKViewDelegate {
         floatTexturePageB.zero(pixelSize: MemoryLayout<Float32>.size * 4)
     }
     
-    func createComputationState() {
-        let d = textureDescriptor(format: .rgba32Uint)
-        computationStatePageA = device.makeTexture(descriptor: d)
-        computationStatePageB = device.makeTexture(descriptor: d)
-        computationStatePageA.zero(pixelSize: MemoryLayout<UInt32>.size * 4)
-        computationStatePageB.zero(pixelSize: MemoryLayout<UInt32>.size * 4)
-    }
-    
     override func viewDidLoad() {
         super.viewDidLoad()
         
@@ -218,7 +209,6 @@ class ViewController: NSViewController, MTKViewDelegate {
         commandQueue = device.makeCommandQueue()
         
         createFloatTexture()
-        createComputationState()
         
         do {
         
@@ -252,13 +242,10 @@ class ViewController: NSViewController, MTKViewDelegate {
             
             $0.setTexture(floatTexturePageB, index: 1)
             $0.setTexture(floatTexturePageA, index: 2)
-            $0.setTexture(computationStatePageA, index: 3)
-            $0.setTexture(computationStatePageB, index: 4)
             $0.setBuffer(alphaBuffer, offset: 0, index: 0)
             $0.setComputePipelineState(mandelbrotPipelineState)
             
             swap(&floatTexturePageA, &floatTexturePageB)
-            swap(&computationStatePageA, &computationStatePageB)
         }
     }
     

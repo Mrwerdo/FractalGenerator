@@ -165,38 +165,57 @@ void computeStep(thread complex<float>& z, const complex<float> c, thread uint& 
     }
 }
 
+uint convertToUInt(float num) {
+    union {
+        float input;
+        uint output;
+    } data;
+    
+    data.input = num;
+    return data.output;
+}
+
+float convertToFloat(uint num) {
+    union {
+        uint input;
+        float output;
+    } data;
+    
+    data.input = num;
+    return data.output;
+}
+
 /// Render a visualization of the Mandelbrot set into the `output` texture,
 /// except, this time we will progressively render it in a higher resolution
 /// over time.
 kernel void mandelbrotShaderHighResolution(texture2d<float, access::write> output [[texture(0)]],
-                                           texture2d<float, access::write> z_save [[texture(1)]],
-                                           texture2d<float, access::read> z_open [[texture(2)]],
-                                           texture2d<uint, access::write> i_save [[texture(3)]],
-                                           texture2d<uint, access::read> i_open [[texture(4)]],
-                                           const device uint2& buff [[buffer(0)]],
+                                           texture2d<float, access::write> save [[texture(1)]],
+                                           texture2d<float, access::read> open [[texture(2)]],
+                                           const device uint2& state [[buffer(0)]],
                                            uint2 upos [[thread_position_in_grid]])
 {
     uint width = output.get_width();
     uint height = output.get_height();
-    
     if (upos.x > width || upos.y > height) return;
     
-    complex<float> c = screenToComplex<float>(upos.x - mandelbrotShiftX*width,
-                                              upos.y,
-                                              width, height);
+    float4 input = open.read(upos);
+    complex<float> z = complex<float>(input.x, input.y);
+    complex<float> c = screenToComplex<float>(upos.x - mandelbrotShiftX * width, upos.y, width, height);
     
-    float2 zdata = z_open.read(upos).xy;
-    complex<float> z(zdata.x, zdata.y);
+    uint iterationCounter = convertToUInt(input.z);
+    uint isComplete = convertToUInt(input.w);
     
-    uint2 idata = i_open.read(upos).xy;
-    uint alpha = idata.x;
-    uint isComplete = idata.y;
-    if (isComplete == 0) {
-        computeStep(z, c, alpha, isComplete, buff.x, buff.y);
-    }
-    float4 color = colorPoint(z, alpha, isComplete, buff.x);
+    uint highestIteration = state[0];
+    uint iterationStep = state[1];
     
-    z_save.write(float4(z._x, z._y, 0, 0), upos);
-    i_save.write(uint4(alpha, isComplete, 0, 0), upos);
-    output.write(color, upos);
+    if (isComplete == 0) computeStep(z, c, iterationCounter, isComplete, highestIteration, iterationStep);
+    
+    float4 outbuf;
+    outbuf.x = z._x;
+    outbuf.y = z._y;
+    outbuf.z = convertToFloat(iterationCounter);
+    outbuf.w = convertToFloat(isComplete);
+    
+    save.write(outbuf, upos);
+    output.write(colorPoint(z, iterationCounter, isComplete, highestIteration), upos);
 }
