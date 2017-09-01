@@ -1,8 +1,6 @@
 #include <metal_stdlib>
 using namespace metal;
 
-#define M_PI 3.141592653589793238462643383
-
 /// Basic implementation of complex numbers, with * + - operators, and a function to return the squared magnitude.
 template<typename T>
 struct complex
@@ -58,12 +56,12 @@ float4 colorForIteration(complex<T> z, complex<T> c, int maxiters, float escape)
         if (z.sqmag() > escape) {
             // Smoothing coloring, adapted from:
             // <https://en.wikipedia.org/wiki/Mandelbrot_set#Continuous_.28smooth.29_coloring>
-            float hue = (i+1-log2(log10(z.sqmag())/2))/maxiters*4 * M_PI + 3;
+            float hue = (i+1-log2(log10(z.sqmag())/2))/maxiters*4 * M_PI_F + 3;
             
             // Convert to RGB
             return float4((cos(hue)+1)/2,
-                          (-cos(hue+M_PI/3)+1)/2,
-                          (-cos(hue-M_PI/3)+1)/2,
+                          (-cos(hue+M_PI_F/3)+1)/2,
+                          (-cos(hue-M_PI_F/3)+1)/2,
                           1);
         }
     }
@@ -110,53 +108,29 @@ kernel void juliaShader(texture2d<float, access::write> output [[texture(0)]],
 }
 
 // ------------------------------------------------------------------------------
-// Overtime Rendering
+// Over-time Rendering
 // ------------------------------------------------------------------------------
 
-/// Both Mandelbrot and Julia sets use the same iterative algorithm to determine whether
-/// a given point is in the set. Each point is colored based on how quickly it escape to infinity.
-//template<typename T>
-//float4 colorForIteration(complex<T> z, complex<T> c, int maxiters, float escape)
-//{
-//    for (int i = 0; i < maxiters; i++) {
-//        z = z*z + c;
-//        if (z.sqmag() > escape) {
-//            // Smoothing coloring, adapted from:
-//            // <https://en.wikipedia.org/wiki/Mandelbrot_set#Continuous_.28smooth.29_coloring>
-//            float hue = (i+1-log2(log10(z.sqmag())/2))/maxiters*4 * M_PI + 3;
-//
-//            // Convert to RGB
-//            return float4((cos(hue)+1)/2,
-//                          (-cos(hue+M_PI/3)+1)/2,
-//                          (-cos(hue-M_PI/3)+1)/2,
-//                          1);
-//        }
-//    }
-//
-//    return float4(0, 0, 0, 1);
-//}
-
-template<typename T>
-float4 colorPoint(complex<T> z, uint a, uint isComplete, uint maxAlpha)
+template<typename A, typename B> B binaryCast(A num)
 {
-    if (isComplete == 1) {
-        int i = (int)a;
-        float hue = (i+1-log2(log10(z.sqmag())/2))/maxAlpha*4 * M_PI + 3;
-        
-        // Convert to RGB
-        return float4((cos(hue)+1)/2,
-                      (-cos(hue+M_PI/3)+1)/2,
-                      (-cos(hue-M_PI/3)+1)/2,
-                      1);
-    } else {
-        return float4(0, 0, 0, 1);
-    }
+    union {
+        A input;
+        B output;
+    } data;
+    
+    data.input = num;
+    return data.output;
 }
 
-void computeStep(thread complex<float>& z, const complex<float> c, thread uint& alpha, thread uint& isComplete, uint maxAlpha, uint iter_step)
+void computeStep(thread complex<float>& z,
+                 const complex<float> c,
+                 thread uint& iterationCounter,
+                 thread uint& isComplete,
+                 uint highestIteration,
+                 uint iterationStep)
 {
-    uint limit = min(alpha + iter_step, maxAlpha);
-    for (; alpha < limit; alpha += 1) {
+    uint limit = min(iterationCounter + iterationStep, highestIteration);
+    for (; iterationCounter < limit; iterationCounter += 1) {
         z = z*z + c;
         if (z.sqmag() > 4) {
             isComplete = 1;
@@ -165,24 +139,16 @@ void computeStep(thread complex<float>& z, const complex<float> c, thread uint& 
     }
 }
 
-uint convertToUInt(float num) {
-    union {
-        float input;
-        uint output;
-    } data;
+float4 colorPoint(complex<float> z, uint i, uint isComplete, uint highestIteration) {
+    if (isComplete == 0) return float4(0, 0, 0, 1);
     
-    data.input = num;
-    return data.output;
-}
-
-float convertToFloat(uint num) {
-    union {
-        uint input;
-        float output;
-    } data;
+    float hue = (i+1-log2(log10(z.sqmag())/2))/highestIteration*4 * M_PI_F + 3;
     
-    data.input = num;
-    return data.output;
+    // Convert to RGB
+    return float4((cos(hue)+1)/2,
+                  (-cos(hue+M_PI_F/3)+1)/2,
+                  (-cos(hue-M_PI_F/3)+1)/2,
+                  1);
 }
 
 /// Render a visualization of the Mandelbrot set into the `output` texture,
@@ -202,8 +168,8 @@ kernel void mandelbrotShaderHighResolution(texture2d<float, access::write> outpu
     complex<float> z = complex<float>(input.x, input.y);
     complex<float> c = screenToComplex<float>(upos.x - mandelbrotShiftX * width, upos.y, width, height);
     
-    uint iterationCounter = convertToUInt(input.z);
-    uint isComplete = convertToUInt(input.w);
+    uint iterationCounter = binaryCast<float, uint>(input.z);
+    uint isComplete = binaryCast<float, uint>(input.w);
     
     uint highestIteration = state[0];
     uint iterationStep = state[1];
@@ -213,8 +179,8 @@ kernel void mandelbrotShaderHighResolution(texture2d<float, access::write> outpu
     float4 outbuf;
     outbuf.x = z._x;
     outbuf.y = z._y;
-    outbuf.z = convertToFloat(iterationCounter);
-    outbuf.w = convertToFloat(isComplete);
+    outbuf.z = binaryCast<uint, float>(iterationCounter);
+    outbuf.w = binaryCast<uint, float>(isComplete);
     
     save.write(outbuf, upos);
     output.write(colorPoint(z, iterationCounter, isComplete, highestIteration), upos);
