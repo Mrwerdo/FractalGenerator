@@ -2,6 +2,7 @@ import Process
 import Support
 import Geometry
 import Cocoa
+import MetalKit
 
 class FAppDelegate: NSObject, NSApplicationDelegate {
     var window: NSWindow!

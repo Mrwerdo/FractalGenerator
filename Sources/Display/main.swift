@@ -2,65 +2,281 @@ import Support
 import Geometry
 import Process
 import Cocoa
+import MetalKit
 
-func **(lhs: Int, rhs: Int) -> Int {
-  return Int(pow(Double(lhs), Double(rhs)))
+extension MTLSize
+{
+    var hasZeroDimension: Bool {
+        return depth * width * height == 0
+    }
 }
 
-func af(Z: Complex) -> Complex {
-    return Z*Z + Complex(1,-0.2321)
-}
-
-func bf(Z: Complex) -> Complex {
-    return Z + 0.279
-}
-
-struct Zipper : FComputer {
-    var numberOfIterations: Int
-    var ac: JuliaSet
-    var bc: JuliaSet
+/// Encapsulates the sizes to be passed to `MTLComputeCommandEncoder.dispatchThreadgroups(_:threadsPerThreadgroup:)`.
+public struct ThreadgroupSizes
+{
+    var threadsPerThreadgroup: MTLSize
+    var threadgroupsPerGrid: MTLSize
     
-    init(numberOfIterations: Int) {
-        self.numberOfIterations = numberOfIterations
-        ac = JuliaSet(numberOfIterations: numberOfIterations, function: af)
-        bc = JuliaSet(numberOfIterations: numberOfIterations, function: bf)
-    }
-
-    func computerPoint(C: Complex) -> UInt {
-        let a = Double(ac.computerPoint(C: C))
-        let b = Double(bc.computerPoint(C: C))
-        let c = (Double(abs(a-b))/Double(abs(b-a)+1))
-        return UInt(abs(c) * 100)
+    public static let zeros = ThreadgroupSizes(
+        threadsPerThreadgroup: MTLSize(),
+        threadgroupsPerGrid: MTLSize())
+    
+    var hasZeroDimension: Bool {
+        return threadsPerThreadgroup.hasZeroDimension || threadgroupsPerGrid.hasZeroDimension
     }
 }
 
-let mandelbrotSet = MandelbrotSet(numberOfIterations: 4000)
-
-public struct ModulusColorizerCGFloat: FColorizer {
-    public typealias Channel = UInt8
-    public var redMax: Channel
-    public var greenMax: Channel
-    public var blueMax: Channel
-
-    public init(rmax: Channel, gmax: Channel, bmax: Channel) {
-        self.redMax = rmax
-        self.greenMax = gmax
-        self.blueMax = bmax
-    }
-
-    public func colorAt(point: Point2D, value: Int) -> Color<Channel> {
-        let r = Channel(value % (2**6)) * Channel(2**2)
-        let g = Channel(value % (2**4)) * Channel(2**4)
-        let b = Channel(value % (2**2)) * Channel(2**6)
-        return Color(r, g, b, Channel(2**8 - 1))
+public extension MTLComputePipelineState
+{
+    /// Selects "reasonable" values for threadsPerThreadgroup and threadgroupsPerGrid for the given `drawableSize`.
+    /// - Remark: The heuristics used here are not perfect. There are many ways to underutilize the GPU,
+    /// including selecting suboptimal threadgroup sizes, or branching in the shader code.
+    ///
+    /// If you are certain you can always use threadgroups with a multiple of `threadExecutionWidth`
+    /// threads, then you may want to use MTLComputePipleineDescriptor and its property
+    /// `threadGroupSizeIsMultipleOfThreadExecutionWidth` to configure your pipeline state.
+    ///
+    /// If your shader is doing some more interesting calculations, and your threads need to share memory in some
+    /// meaningful way, then you’ll probably want to do something less generalized to choose your threadgroups.
+    func threadgroupSizesForDrawableSize(_ drawableSize: CGSize) -> ThreadgroupSizes
+    {
+        let waveSize = self.threadExecutionWidth
+        let maxThreadsPerGroup = self.maxTotalThreadsPerThreadgroup
+        
+        let drawableWidth = Int(drawableSize.width)
+        let drawableHeight = Int(drawableSize.height)
+        
+        if drawableWidth == 0 || drawableHeight == 0 {
+            print("drawableSize is zero")
+            return .zeros
+        }
+        
+        // Determine the set of possible sizes (not exceeding maxThreadsPerGroup).
+        var candidates: [ThreadgroupSizes] = []
+        for groupWidth in 1...maxThreadsPerGroup {
+            for groupHeight in 1...(maxThreadsPerGroup/groupWidth) {
+                // Round up the number of groups to ensure the entire drawable size is covered.
+                // <http://stackoverflow.com/a/2745086/23649>
+                let groupsPerGrid = MTLSize(width: (drawableWidth + groupWidth - 1) / groupWidth,
+                                            height: (drawableHeight + groupHeight - 1) / groupHeight,
+                                            depth: 1)
+                
+                candidates.append(ThreadgroupSizes(
+                    threadsPerThreadgroup: MTLSize(width: groupWidth, height: groupHeight, depth: 1),
+                    threadgroupsPerGrid: groupsPerGrid))
+            }
+        }
+        
+        /// Make a rough approximation for how much compute power will be "wasted" (e.g. when the total number
+        /// of threads in a group isn’t an even multiple of `threadExecutionWidth`, or when the total number of
+        /// threads being dispatched exceeds the drawable size). Smaller is better.
+        func _estimatedUnderutilization(_ s: ThreadgroupSizes) -> Int {
+            let excessWidth = s.threadsPerThreadgroup.width * s.threadgroupsPerGrid.width - drawableWidth
+            let excessHeight = s.threadsPerThreadgroup.height * s.threadgroupsPerGrid.height - drawableHeight
+            
+            let totalThreadsPerGroup = s.threadsPerThreadgroup.width * s.threadsPerThreadgroup.height
+            let totalGroups = s.threadgroupsPerGrid.width * s.threadgroupsPerGrid.height
+            
+            let excessArea = excessWidth * drawableHeight + excessHeight * drawableWidth + excessWidth * excessHeight
+            let excessThreadsPerGroup = (waveSize - totalThreadsPerGroup % waveSize) % waveSize
+            
+            return excessArea + excessThreadsPerGroup * totalGroups
+        }
+        
+        // Choose the threadgroup sizes which waste the least amount of execution time/power.
+        let result = candidates.min { _estimatedUnderutilization($0) < _estimatedUnderutilization($1) }
+        return result ?? .zeros
     }
 }
 
-let colorizer = ModulusColorizerCGFloat(rmax: 64, gmax: 4, bmax: 64)
+public extension MTLCommandQueue
+{
+    /// Helper function for running compute kernels and displaying the output onscreen.
+    ///
+    /// This function configures a MTLComputeCommandEncoder by setting the given `drawable`'s texture
+    /// as the 0th texture (so it will be available as a `[[texture(0)]]` parameter in the kernel).
+    /// It calls `drawBlock` to allow further configuration, then dispatches the threadgroups and
+    /// presents the results.
+    ///
+    /// - Requires: `drawBlock` must call `setComputePipelineState` on the command encoder to select a compute function.
+    func computeAndDraw(into drawable: @autoclosure () -> CAMetalDrawable?, with threadgroupSizes: ThreadgroupSizes, drawBlock: (MTLComputeCommandEncoder) -> Void)
+    {
+        if threadgroupSizes.hasZeroDimension {
+            print("dimensions are zero; not drawing")
+            return
+        }
+        
+        autoreleasepool {  // Ensure drawables are freed for the system to allocate new ones.
+            guard let drawable = drawable() else {
+                print("no drawable")
+                return
+            }
+            
+            guard let buffer = self.makeCommandBuffer(),
+                let encoder = buffer.makeComputeCommandEncoder() else {
+                    return
+            }
+            encoder.setTexture(drawable.texture, index: 0)
+            
+            drawBlock(encoder)
+            
+            encoder.dispatchThreadgroups(threadgroupSizes.threadgroupsPerGrid, threadsPerThreadgroup: threadgroupSizes.threadsPerThreadgroup)
+            encoder.endEncoding()
+            
+            buffer.present(drawable)
+            buffer.commit()
+            buffer.waitUntilCompleted()
+        }
+    }
+}
 
-var frame = CGRect(x: 0, y: 0, width: 400, height: 400)
+extension MTLTexture {
+    func zero(pixelSize: Int) {
+        var region = MTLRegion()
+        region.size = MTLSize(width: width, height: height, depth: 1)
+        let byteCount = width * height * pixelSize
+        let buffer = UnsafeMutablePointer<Int8>.allocate(capacity: byteCount)
+        buffer.initialize(to: 0, count: byteCount)
+        replace(region: region, mipmapLevel: 0, withBytes: buffer, bytesPerRow: width * pixelSize)
+        buffer.deinitialize(count: byteCount)
+        buffer.deallocate(capacity: byteCount)
+    }
+}
+
+class ViewController: NSViewController, MTKViewDelegate {
+    
+    var mview: MTKView!
+    var commandQueue: MTLCommandQueue!
+    var device: MTLDevice!
+    let shaderSourcePath = URL(fileURLWithPath: "/Users/mrwerdo/Developer/FractalGenerator/Sources/Display/Shaders.metal")
+    var library: MTLLibrary!
+    var dispatchQueue: DispatchQueue!
+    var threadgroupSizes: ThreadgroupSizes!
+    
+    var mandelbrotShader: MTLFunction!
+    var mandelbrotPipelineState: MTLComputePipelineState!
+    var floatTexturePageA: MTLTexture!
+    var floatTexturePageB: MTLTexture!
+    var computationStatePageA: MTLTexture!
+    var computationStatePageB: MTLTexture!
+    var alphaBuffer: MTLBuffer!
+    let maxIterations: UInt32 = 1000
+    var alphaCounter: UInt32 = 0 {
+        didSet {
+            if alphaCounter >= maxIterations {
+                mview.isPaused = true
+            }
+        }
+    }
+    var iter_step: UInt32 = 1
+    
+    override func loadView() {
+        mview = MTKView()
+        mview.framebufferOnly = false
+        view = mview
+    }
+    
+    func textureDescriptor(format: MTLPixelFormat) -> MTLTextureDescriptor {
+        let d = MTLTextureDescriptor()
+        d.textureType = .type2D
+        d.pixelFormat = format
+        d.width = 400
+        d.height = 400
+        d.depth = 1
+        d.arrayLength = 1
+        d.mipmapLevelCount = 1
+        d.sampleCount = 1
+        d.cpuCacheMode = .writeCombined
+        d.storageMode = .managed
+        d.usage = [.shaderRead, .shaderWrite]
+        return d
+    }
+    
+    func createFloatTexture() {
+        let d = textureDescriptor(format: .rgba32Float)
+        floatTexturePageA = device.makeTexture(descriptor: d)
+        floatTexturePageB = device.makeTexture(descriptor: d)
+        floatTexturePageA.zero(pixelSize: MemoryLayout<Float32>.size * 4)
+        floatTexturePageB.zero(pixelSize: MemoryLayout<Float32>.size * 4)
+    }
+    
+    func createComputationState() {
+        let d = textureDescriptor(format: .rgba32Uint)
+        computationStatePageA = device.makeTexture(descriptor: d)
+        computationStatePageB = device.makeTexture(descriptor: d)
+        computationStatePageA.zero(pixelSize: MemoryLayout<UInt32>.size * 4)
+        computationStatePageB.zero(pixelSize: MemoryLayout<UInt32>.size * 4)
+    }
+    
+    override func viewDidLoad() {
+        super.viewDidLoad()
+        
+        device = MTLCreateSystemDefaultDevice()
+        mview.device = device
+        mview.colorPixelFormat = MTLPixelFormat.bgra8Unorm
+        mview.delegate = self
+        commandQueue = device.makeCommandQueue()
+        
+        createFloatTexture()
+        createComputationState()
+        
+        do {
+        
+            let source = try String(contentsOf: shaderSourcePath)
+            library = try device.makeLibrary(source: source, options: nil)
+            mandelbrotShader = library.makeFunction(name: "mandelbrotShaderHighResolution")
+            alphaBuffer = device.makeBuffer(length: 2 * MemoryLayout<UInt32>.size, options: [])!
+            
+            mandelbrotPipelineState = try device.makeComputePipelineState(function: mandelbrotShader)
+            
+            dispatchQueue = DispatchQueue.global(qos: .userInitiated)
+            
+        } catch {
+            print(error)
+            return
+        }
+    }
+    
+    override func viewDidLayout() {
+        threadgroupSizes = mandelbrotPipelineState.threadgroupSizesForDrawableSize(mview.drawableSize)
+    }
+    
+    func drawMandelbrotSet(drawable: CAMetalDrawable) {
+        commandQueue.computeAndDraw(into: drawable, with: threadgroupSizes) {
+            
+            alphaCounter += 1
+            
+            let buff = alphaBuffer.contents().bindMemory(to: UInt32.self, capacity: 2)
+            buff[0] = alphaCounter
+            buff[1] = iter_step
+            
+            $0.setTexture(floatTexturePageB, index: 1)
+            $0.setTexture(floatTexturePageA, index: 2)
+            $0.setTexture(computationStatePageA, index: 3)
+            $0.setTexture(computationStatePageB, index: 4)
+            $0.setBuffer(alphaBuffer, offset: 0, index: 0)
+            $0.setComputePipelineState(mandelbrotPipelineState)
+            
+            swap(&floatTexturePageA, &floatTexturePageB)
+            swap(&computationStatePageA, &computationStatePageB)
+        }
+    }
+    
+    func mtkView(_ view: MTKView, drawableSizeWillChange size: CGSize) {
+        // meh
+    }
+    
+    func draw(in view: MTKView) {
+        guard let drawable = view.currentDrawable else {
+            return
+        }
+        
+        drawMandelbrotSet(drawable: drawable)
+    }
+}
+
+let frame = CGRect(x: 0, y: 0, width: 400, height: 400)
 let app = FAppDelegate(frame: frame)
-let v = FViewController("MandelbrotSet", frame, mandelbrotSet, colorizer)
-app.controller = v
+app.controller = ViewController()
+app.controller.view.frame = frame
 app.run()
-
