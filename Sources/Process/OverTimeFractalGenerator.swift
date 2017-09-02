@@ -7,6 +7,7 @@
 
 import Foundation
 import MetalKit
+import Support
 
 extension MTLSize
 {
@@ -107,7 +108,17 @@ extension MTLTexture {
     }
 }
 
-class OverTimeFractalComputer: NSObject, MTKViewDelegate {
+extension Complex {
+    var real_uint32: UInt32 {
+        return Float32(real).bitPattern
+    }
+    
+    var imag_uint32: UInt32 {
+        return Float32(imaginary).bitPattern
+    }
+}
+
+public class OverTimeFractalComputer: NSObject, MTKViewDelegate {
     
     private var commandQueue: MTLCommandQueue
     private var device: MTLDevice
@@ -121,7 +132,11 @@ class OverTimeFractalComputer: NSObject, MTKViewDelegate {
     private var userArgumentsBuffer: MTLBuffer
     private var argumentsPaths: [KeyPath<OverTimeFractalComputer, UInt32>] = [
         \.iterationCount,
-        \.iterationsPerFrame
+        \.iterationsPerFrame,
+        \.argandDiagramFrame.topLeft.real_uint32,
+        \.argandDiagramFrame.topLeft.imag_uint32,
+        \.argandDiagramFrame.bottomRight.real_uint32,
+        \.argandDiagramFrame.bottomRight.imag_uint32
     ]
     
     private var needsClear: Bool = true
@@ -129,8 +144,13 @@ class OverTimeFractalComputer: NSObject, MTKViewDelegate {
         return iterationCount >= iterationLimit
     }
     public private(set) var iterationCount: UInt32 = 0
-    public var iterationLimit: UInt32 = 1000
-    public var iterationsPerFrame: UInt32 = 1
+    public var argandDiagramFrame: ComplexRect {
+        didSet {
+            needsClear = true
+        }
+    }
+    public var iterationLimit: UInt32 = 2000
+    public var iterationsPerFrame: UInt32 = 100
     
     public var shaderName: String {
         return shaderFunction.name
@@ -142,10 +162,11 @@ class OverTimeFractalComputer: NSObject, MTKViewDelegate {
         case couldNotMakeBuffer
     }
     
-    public init(device d: MTLDevice, shaderSource url: URL, functionName: String) throws {
+    public init(device d: MTLDevice, shaderSource url: URL, functionName: String, argandFrame: ComplexRect) throws {
         device = d
         threadgroupSizes = .zeros
         shaderSource = try String(contentsOf: url)
+        argandDiagramFrame = argandFrame
         
         let library = try device.makeLibrary(source: shaderSource, options: nil)
 
@@ -172,6 +193,7 @@ class OverTimeFractalComputer: NSObject, MTKViewDelegate {
         renderPageA.zero(pixelSize: MemoryLayout<Float32>.size * 4)
         renderPageB.zero(pixelSize: MemoryLayout<Float32>.size * 4)
         iterationCount = 0
+        needsClear = false
     }
     
     private func resizePages(for size: CGSize) {
@@ -194,6 +216,7 @@ class OverTimeFractalComputer: NSObject, MTKViewDelegate {
         renderPageB.zero(pixelSize: MemoryLayout<Float32>.size * 4)
         
         threadgroupSizes = pipeline.threadgroupSizesForDrawableSize(size)
+        needsClear = false
     }
     
     private func synchronizeBuffer() {
@@ -218,6 +241,8 @@ class OverTimeFractalComputer: NSObject, MTKViewDelegate {
         }
         
         autoreleasepool {
+            if needsClear { reset() }
+            
             guard let buffer = commandQueue.makeCommandBuffer(),
                 let encoder = buffer.makeComputeCommandEncoder() else {
                     return

@@ -14,19 +14,20 @@ class FAppDelegate: NSObject, NSApplicationDelegate {
         initialFrame = frame
         super.init()
     }
-
+    
     func run() {
         let app = NSApplication.shared
         app.delegate = self
         window = NSWindow(contentRect: initialFrame, 
-                            styleMask: NSWindow.StyleMask.fullSizeContentView,
+                            styleMask: [.fullSizeContentView],
                             backing: NSWindow.BackingStoreType.buffered,
-                            defer: false)
-        window.contentView!.addSubview(controller.view)
-        window.isMovableByWindowBackground = true
+                            defer: true)
+        window.contentViewController = controller
         window.makeKeyAndOrderFront(nil)
+        window.isMovableByWindowBackground = true
         window.center()
-        app.activate(ignoringOtherApps: false)
+        window.title = "The Fractal Generator"
+        app.activate(ignoringOtherApps: true)
         app.run()
     }
 }
