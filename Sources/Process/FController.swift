@@ -56,6 +56,7 @@ extension FController where Computer.ZValue == Colorizer.ZValue, Colorizer.Color
                 let color = self.colorizer.colorAt(point: point, value: zvalue)
                 try! self.renderer.write(at: point, color: color)
             }
+            
             let percentage = fraction * Double(x)
             if percentage * 100 == Double(Int(percentage * 100)) {
                 let elapsedTime = Time.difference(then: start)

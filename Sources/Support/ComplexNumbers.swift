@@ -113,6 +113,7 @@ public func *(lhs: Complex, rhs: Double) -> Complex { // Imaginary times real
 public func abs(_ n: Complex) -> Double {
     return sqrt(n.real * n.real + n.imaginary * n.imaginary)
 }
+
 public func modulus(_ n: Complex) -> Double {
     return abs(n)
 }
@@ -130,9 +131,11 @@ public func pow(_ base: Complex, _ n: Double) -> Complex {
 }
 
 infix operator ** : MultiplicationPrecedence
+
 public func **(base: Complex, n: Double) -> Complex {
     return pow(base, n)
 }
+
 public func **(base: Complex, n: Int) -> Complex {
     return pow(base, Double(n))
 }
@@ -155,28 +158,32 @@ public func e(_ x: Double, accuracy: Int = 5) -> Double {
     }
     return sum
 }
+
 public func e(_ x: Complex, accuracy: Int = 5) -> Complex {
     let r = e(x.real, accuracy: accuracy)
     return Complex(cos(x.imaginary), sin(x.imaginary)) * r
 }
+
 public func sin(theta: Complex) -> Complex {
     let p1 = e(Complex(0, 1) * theta)
     let p2 = e(Complex(0, 1) * -theta)
     return (p1 - p2) / (2 * Complex(0, 1))
 }
+
 public func cos(theta: Complex) -> Complex {
     let p1 = e(Complex(0, 1) * theta)
     let p2 = e(Complex(0, 1) * -theta)
     return (p1 + p2) / 2
 }
 
-
 public struct ComplexRect : Equatable, CustomStringConvertible {
     public var topLeft: Complex
     public var bottomRight: Complex
+    
     public var bottomLeft: Complex {
         return Complex(topLeft.real, bottomRight.imaginary)
     }
+    
     public var topRight: Complex {
         return Complex(bottomRight.real, topLeft.imaginary)
     }
@@ -185,10 +192,12 @@ public struct ComplexRect : Equatable, CustomStringConvertible {
         topLeft = Complex(min(c1.real, c2.real), max(c1.imaginary, c2.imaginary))
         bottomRight = Complex(max(c1.real, c2.real), min(c1.imaginary, c2.imaginary))
     }
+    
     public var description: String {
         return "tl: \(topLeft), br: \(bottomRight), bl: \(bottomLeft), tr: \(topRight)"
     }
 }
+
 public func ==(lhs: ComplexRect, rhs: ComplexRect) -> Bool {
     return (lhs.topLeft == rhs.topLeft) && (lhs.bottomRight == rhs.bottomRight)
 }

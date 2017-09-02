@@ -32,6 +32,7 @@ public struct MandelbrotSet : FComputer {
         return 0
     }
 }
+
 public struct JuliaSet : FComputer {
     public var numberOfIterations: Int
     public var function: (Complex) -> Complex
