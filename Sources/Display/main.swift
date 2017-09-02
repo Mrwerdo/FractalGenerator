@@ -143,125 +143,159 @@ extension MTLTexture {
     }
 }
 
-class ViewController: NSViewController, MTKViewDelegate {
+class OverTimeFractalComputer: NSObject, MTKViewDelegate {
     
-    var mview: MTKView!
-    var commandQueue: MTLCommandQueue!
-    var device: MTLDevice!
-    let shaderSourcePath = URL(fileURLWithPath: "/Users/mrwerdo/Developer/FractalGenerator/Sources/Display/Shaders.metal")
-    var library: MTLLibrary!
-    var dispatchQueue: DispatchQueue!
-    var threadgroupSizes: ThreadgroupSizes!
+    private var commandQueue: MTLCommandQueue
+    private var device: MTLDevice
     
-    var mandelbrotShader: MTLFunction!
-    var mandelbrotPipelineState: MTLComputePipelineState!
-    var floatTexturePageA: MTLTexture!
-    var floatTexturePageB: MTLTexture!
-    var alphaBuffer: MTLBuffer!
-    let maxIterations: UInt32 = 1000
-    var alphaCounter: UInt32 = 0 {
-        didSet {
-            if alphaCounter >= maxIterations {
-                mview.isPaused = true
-                print("done")
-            }
+    private var shaderSource: String
+    private var threadgroupSizes: ThreadgroupSizes
+    private var shaderFunction: MTLFunction
+    private var pipeline: MTLComputePipelineState
+    private var renderPageA: MTLTexture!
+    private var renderPageB: MTLTexture!
+    private var userArgumentsBuffer: MTLBuffer
+    private var argumentsPaths: [KeyPath<OverTimeFractalComputer, UInt32>] = [
+        \.iterationCount,
+        \.iterationsPerFrame
+    ]
+    
+    public var isComplete: Bool {
+        return iterationCount >= iterationLimit
+    }
+    public private(set) var iterationCount: UInt32 = 0
+    public var iterationLimit: UInt32 = 1000
+    public var iterationsPerFrame: UInt32 = 1
+    
+    public var shaderName: String {
+        return shaderFunction.name
+    }
+    
+    public enum InitError: Error {
+        case couldNotMakeCommandQueue
+        case couldNotMakeShaderFunction
+        case couldNotMakeBuffer
+    }
+    
+    public init(device d: MTLDevice, shaderSource url: URL, functionName: String) throws {
+        device = d
+        threadgroupSizes = .zeros
+        shaderSource = try String(contentsOf: url)
+        
+        let library = try device.makeLibrary(source: shaderSource, options: nil)
+        
+        guard let sf = library.makeFunction(name: functionName) else {
+            throw InitError.couldNotMakeShaderFunction
         }
-    }
-    var iter_step: UInt32 = 1
-    
-    override func loadView() {
-        mview = MTKView()
-        mview.framebufferOnly = false
-        view = mview
-    }
-    
-    func textureDescriptor(format: MTLPixelFormat, size: CGSize) -> MTLTextureDescriptor {
-        let d = MTLTextureDescriptor()
-        d.textureType = .type2D
-        d.pixelFormat = format
-        d.width = Int(size.width)
-        d.height = Int(size.height)
-        d.depth = 1
-        d.arrayLength = 1
-        d.mipmapLevelCount = 1
-        d.sampleCount = 1
-        d.cpuCacheMode = .writeCombined
-        d.storageMode = .managed
-        d.usage = [.shaderRead, .shaderWrite]
-        return d
+        
+        guard let cq = device.makeCommandQueue() else {
+            throw InitError.couldNotMakeCommandQueue
+        }
+        
+        let length = MemoryLayout<UInt32>.size * argumentsPaths.count
+        guard let bf = device.makeBuffer(length: length, options: []) else {
+            throw InitError.couldNotMakeBuffer
+        }
+        
+        pipeline = try device.makeComputePipelineState(function: sf)
+        shaderFunction = sf
+        commandQueue = cq
+        userArgumentsBuffer = bf
     }
     
-    func createFloatTexture(for size: CGSize) {
+    public func reset() {
+        let size = CGSize(width: renderPageA.width, height: renderPageA.height)
+        resizePages(for: size)
+        iterationCount = 0
+    }
+    
+    private func resizePages(for size: CGSize) {
         guard size.width * size.height != 0 else {
+            renderPageA = nil
+            renderPageB = nil
             return
         }
         
-        let d = textureDescriptor(format: .rgba32Float, size: size)
-        floatTexturePageA = device.makeTexture(descriptor: d)
-        floatTexturePageB = device.makeTexture(descriptor: d)
-        floatTexturePageA.zero(pixelSize: MemoryLayout<Float32>.size * 4)
-        floatTexturePageB.zero(pixelSize: MemoryLayout<Float32>.size * 4)
+        let d = MTLTextureDescriptor()
+        d.pixelFormat = .rgba32Float
+        d.width = Int(size.width)
+        d.height = Int(size.height)
+        d.cpuCacheMode = .writeCombined
+        d.usage = [.shaderRead, .shaderWrite]
+        
+        renderPageA = device.makeTexture(descriptor: d)
+        renderPageB = device.makeTexture(descriptor: d)
+        renderPageA.zero(pixelSize: MemoryLayout<Float32>.size * 4)
+        renderPageB.zero(pixelSize: MemoryLayout<Float32>.size * 4)
+        
+        threadgroupSizes = pipeline.threadgroupSizesForDrawableSize(size)
+    }
+    
+    private func synchronizeBuffer() {
+        let ptr = userArgumentsBuffer.contents().bindMemory(to: UInt32.self, capacity: argumentsPaths.count)
+        for i in 0..<argumentsPaths.count {
+            let p = argumentsPaths[i]
+            ptr[i] = self[keyPath: p]
+        }
+    }
+    
+    public func mtkView(_ view: MTKView, drawableSizeWillChange size: CGSize) {
+        resizePages(for: size)
+    }
+    
+    public func draw(in view: MTKView) {
+        guard let drawable = view.currentDrawable else {
+            return
+        }
+        
+        commandQueue.computeAndDraw(into: drawable, with: threadgroupSizes) {
+            iterationCount += 1
+            synchronizeBuffer()
+            
+            $0.setTexture(renderPageA, index: 1)
+            $0.setTexture(renderPageB, index: 2)
+            $0.setBuffer(userArgumentsBuffer, offset: 0, index: 0)
+            $0.setComputePipelineState(pipeline)
+            
+            swap(&renderPageA, &renderPageB)
+        }
+    }
+}
+
+class ViewController: NSViewController {
+    
+    let mtkview = MTKView()
+    let source = URL(fileURLWithPath: "/Users/mrwerdo/Developer/FractalGenerator/Sources/Display/Shaders.metal")
+    let shaderName = "mandelbrotShaderHighResolution"
+    var delegate: OverTimeFractalComputer?
+    
+    override func loadView() {
+        view = mtkview
+        mtkview.framebufferOnly = false
     }
     
     override func viewDidLoad() {
         super.viewDidLoad()
         
-        device = MTLCreateSystemDefaultDevice()
-        mview.device = device
-        mview.colorPixelFormat = MTLPixelFormat.bgra8Unorm
-        mview.delegate = self
-        commandQueue = device.makeCommandQueue()
-        createFloatTexture(for: mview.frame.size)
+        guard let device = MTLCreateSystemDefaultDevice() else {
+            return
+        }
         
         do {
-        
-            let source = try String(contentsOf: shaderSourcePath)
-            library = try device.makeLibrary(source: source, options: nil)
-            mandelbrotShader = library.makeFunction(name: "mandelbrotShaderHighResolution")
-            alphaBuffer = device.makeBuffer(length: 2 * MemoryLayout<UInt32>.size, options: [])!
-            
-            mandelbrotPipelineState = try device.makeComputePipelineState(function: mandelbrotShader)
-            
-            dispatchQueue = DispatchQueue.global(qos: .userInitiated)
-            
+            mtkview.device = device
+            mtkview.colorPixelFormat = MTLPixelFormat.bgra8Unorm
+            delegate = try OverTimeFractalComputer(device: device,
+                                                   shaderSource: source,
+                                                   functionName: shaderName)
+            mtkview.delegate = delegate
         } catch {
             print(error)
-            return
         }
     }
     
     override func viewDidLayout() {
-        threadgroupSizes = mandelbrotPipelineState.threadgroupSizesForDrawableSize(mview.drawableSize)
-    }
-    
-    func drawMandelbrotSet(drawable: CAMetalDrawable) {
-        commandQueue.computeAndDraw(into: drawable, with: threadgroupSizes) {
-            
-            alphaCounter += 1
-            
-            let buff = alphaBuffer.contents().bindMemory(to: UInt32.self, capacity: 2)
-            buff[0] = alphaCounter
-            buff[1] = iter_step
-            
-            $0.setTexture(floatTexturePageB, index: 1)
-            $0.setTexture(floatTexturePageA, index: 2)
-            $0.setBuffer(alphaBuffer, offset: 0, index: 0)
-            $0.setComputePipelineState(mandelbrotPipelineState)
-            
-            swap(&floatTexturePageA, &floatTexturePageB)
-        }
-    }
-    
-    func mtkView(_ view: MTKView, drawableSizeWillChange size: CGSize) {
-        createFloatTexture(for: size)
-    }
-    
-    func draw(in view: MTKView) {
-        guard let drawable = view.currentDrawable else {
-            return
-        }
-        
-        drawMandelbrotSet(drawable: drawable)
+        super.viewDidLayout()
+        mtkview.delegate?.mtkView(mtkview, drawableSizeWillChange: mtkview.frame.size)
     }
 }
 
