@@ -166,7 +166,7 @@ kernel void mandelbrotShaderHighResolution(texture2d<float, access::write> outpu
     
     float4 input = open.read(upos);
     complex<float> z = complex<float>(input.x, input.y);
-    complex<float> c = screenToComplex<float>(upos.x - mandelbrotShiftX * width, upos.y, width, height);
+    complex<float> c = screenToComplex<float>(upos.x, upos.y, width, height);
     
     uint iterationCounter = binaryCast<float, uint>(input.z);
     uint isComplete = binaryCast<float, uint>(input.w);

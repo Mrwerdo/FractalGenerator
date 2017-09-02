@@ -175,12 +175,12 @@ class ViewController: NSViewController, MTKViewDelegate {
         view = mview
     }
     
-    func textureDescriptor(format: MTLPixelFormat) -> MTLTextureDescriptor {
+    func textureDescriptor(format: MTLPixelFormat, size: CGSize) -> MTLTextureDescriptor {
         let d = MTLTextureDescriptor()
         d.textureType = .type2D
         d.pixelFormat = format
-        d.width = 400
-        d.height = 400
+        d.width = Int(size.width)
+        d.height = Int(size.height)
         d.depth = 1
         d.arrayLength = 1
         d.mipmapLevelCount = 1
@@ -191,8 +191,12 @@ class ViewController: NSViewController, MTKViewDelegate {
         return d
     }
     
-    func createFloatTexture() {
-        let d = textureDescriptor(format: .rgba32Float)
+    func createFloatTexture(for size: CGSize) {
+        guard size.width * size.height != 0 else {
+            return
+        }
+        
+        let d = textureDescriptor(format: .rgba32Float, size: size)
         floatTexturePageA = device.makeTexture(descriptor: d)
         floatTexturePageB = device.makeTexture(descriptor: d)
         floatTexturePageA.zero(pixelSize: MemoryLayout<Float32>.size * 4)
@@ -207,8 +211,7 @@ class ViewController: NSViewController, MTKViewDelegate {
         mview.colorPixelFormat = MTLPixelFormat.bgra8Unorm
         mview.delegate = self
         commandQueue = device.makeCommandQueue()
-        
-        createFloatTexture()
+        createFloatTexture(for: mview.frame.size)
         
         do {
         
@@ -250,7 +253,7 @@ class ViewController: NSViewController, MTKViewDelegate {
     }
     
     func mtkView(_ view: MTKView, drawableSizeWillChange size: CGSize) {
-        // meh
+        createFloatTexture(for: size)
     }
     
     func draw(in view: MTKView) {
@@ -262,7 +265,8 @@ class ViewController: NSViewController, MTKViewDelegate {
     }
 }
 
-let frame = CGRect(x: 0, y: 0, width: 400, height: 400)
+let k = 100
+let frame = CGRect(x: 0, y: 0, width: 16 * k, height: 9 * k)
 let app = FAppDelegate(frame: frame)
 app.controller = ViewController()
 app.controller.view.frame = frame
