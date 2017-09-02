@@ -1,0 +1,34 @@
+{
+  "object": {
+    "pins": [
+      {
+        "package": "CLibTIFF",
+        "repositoryURL": "https://github.com/mrwerdo/CLibTIFF",
+        "state": {
+          "branch": null,
+          "revision": "4161b49d3253814e5c3bcbf16aa3cc7eb60518bf",
+          "version": "0.1.4"
+        }
+      },
+      {
+        "package": "Geometry",
+        "repositoryURL": "https://github.com/mrwerdo/Geometry",
+        "state": {
+          "branch": null,
+          "revision": "b9c6ab87c0d4b9c2572a321941ff15fcfd20d7d6",
+          "version": "1.2.2"
+        }
+      },
+      {
+        "package": "LibTIFF",
+        "repositoryURL": "https://github.com/Mrwerdo/LibTIFF.git",
+        "state": {
+          "branch": null,
+          "revision": "5c032efdc1adf002e216df170eb0b79db59ba67a",
+          "version": "0.2.6"
+        }
+      }
+    ]
+  },
+  "version": 1
+}

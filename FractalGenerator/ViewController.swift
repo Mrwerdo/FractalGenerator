@@ -8,6 +8,10 @@
 import UIKit
 import MetalKit
 
+func ƒ(_ s: String = #function) {
+    print(s)
+}
+
 class ViewController: UIViewController {
 
     @IBOutlet var mtkView: MTKView!
@@ -25,6 +29,7 @@ class ViewController: UIViewController {
         mtkView.colorPixelFormat = MTLPixelFormat.bgra8Unorm
         
         guard let url = Bundle.main.url(forResource: "Shaders", withExtension: "metal") else {
+            print("could not find shader source files!")
             return
         }
         
@@ -32,10 +37,16 @@ class ViewController: UIViewController {
             delegate = try OverTimeFractalComputer(device: device,
                                                    shaderSource: url,
                                                    functionName: shaderName)
+            delegate.mtkView(mtkView, drawableSizeWillChange: mtkView.drawableSize)
+            mtkView.delegate = delegate
         } catch {
             print(error)
             return
         }
+    }
+    
+    override func touchesEnded(_ touches: Set<UITouch>, with event: UIEvent?) {
+        delegate.reset()
     }
 
     override func didReceiveMemoryWarning() {

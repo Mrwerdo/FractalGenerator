@@ -124,6 +124,7 @@ class OverTimeFractalComputer: NSObject, MTKViewDelegate {
         \.iterationsPerFrame
     ]
     
+    private var needsClear: Bool = true
     public var isComplete: Bool {
         return iterationCount >= iterationLimit
     }
@@ -148,7 +149,6 @@ class OverTimeFractalComputer: NSObject, MTKViewDelegate {
         
         let library = try device.makeLibrary(source: shaderSource, options: nil)
 
-        
         guard let sf = library.makeFunction(name: functionName) else {
             throw InitError.couldNotMakeShaderFunction
         }
@@ -169,8 +169,8 @@ class OverTimeFractalComputer: NSObject, MTKViewDelegate {
     }
     
     public func reset() {
-        let size = CGSize(width: renderPageA.width, height: renderPageA.height)
-        resizePages(for: size)
+        renderPageA.zero(pixelSize: MemoryLayout<Float32>.size * 4)
+        renderPageB.zero(pixelSize: MemoryLayout<Float32>.size * 4)
         iterationCount = 0
     }
     
@@ -222,7 +222,7 @@ class OverTimeFractalComputer: NSObject, MTKViewDelegate {
                 let encoder = buffer.makeComputeCommandEncoder() else {
                     return
             }
-                    
+
             iterationCount += 1
             synchronizeBuffer()
             
@@ -239,7 +239,6 @@ class OverTimeFractalComputer: NSObject, MTKViewDelegate {
             
             buffer.present(drawable)
             buffer.commit()
-            buffer.waitUntilCompleted()
         }
     }
 }
