@@ -1,7 +1,11 @@
-import Support
-import Geometry
-import Process
-import Cocoa
+//
+//  OverTimeFractalGenerator.swift
+//  FractalGenerator
+//
+//  Created by Andrew Thompson on 2/9/17.
+//
+
+import Foundation
 import MetalKit
 
 extension MTLSize
@@ -143,6 +147,7 @@ class OverTimeFractalComputer: NSObject, MTKViewDelegate {
         shaderSource = try String(contentsOf: url)
         
         let library = try device.makeLibrary(source: shaderSource, options: nil)
+
         
         guard let sf = library.makeFunction(name: functionName) else {
             throw InitError.couldNotMakeShaderFunction
@@ -217,7 +222,7 @@ class OverTimeFractalComputer: NSObject, MTKViewDelegate {
                 let encoder = buffer.makeComputeCommandEncoder() else {
                     return
             }
-            
+                    
             iterationCount += 1
             synchronizeBuffer()
             
@@ -238,47 +243,3 @@ class OverTimeFractalComputer: NSObject, MTKViewDelegate {
         }
     }
 }
-
-class ViewController: NSViewController {
-    
-    let mtkview = MTKView()
-    let source = URL(fileURLWithPath: "/Users/mrwerdo/Developer/FractalGenerator/Sources/Display/Shaders.metal")
-    let shaderName = "mandelbrotShaderHighResolution"
-    var delegate: OverTimeFractalComputer?
-    
-    override func loadView() {
-        view = mtkview
-        mtkview.framebufferOnly = false
-    }
-    
-    override func viewDidLoad() {
-        super.viewDidLoad()
-        
-        guard let device = MTLCreateSystemDefaultDevice() else {
-            return
-        }
-        
-        do {
-            mtkview.device = device
-            mtkview.colorPixelFormat = MTLPixelFormat.bgra8Unorm
-            delegate = try OverTimeFractalComputer(device: device,
-                                                   shaderSource: source,
-                                                   functionName: shaderName)
-            mtkview.delegate = delegate
-        } catch {
-            print(error)
-        }
-    }
-    
-    override func viewDidLayout() {
-        super.viewDidLayout()
-        mtkview.delegate?.mtkView(mtkview, drawableSizeWillChange: mtkview.frame.size)
-    }
-}
-
-let k = 100
-let frame = CGRect(x: 0, y: 0, width: 16 * k, height: 9 * k)
-let app = FAppDelegate(frame: frame)
-app.controller = ViewController()
-app.controller.view.frame = frame
-app.run()
