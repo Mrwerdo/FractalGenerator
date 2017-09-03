@@ -259,7 +259,6 @@ public class OverTimeFractalComputer: NSObject, MTKViewDelegate {
     func drawScrolling(encoder: MTLComputeCommandEncoder, drawable: CAMetalDrawable) {
         synchronizeBuffer()
         encoder.setTexture(drawable.texture, index: 0)
-        encoder.setTexture(renderPageA, index: 1)
         encoder.setBuffer(userArgumentsBuffer, offset: 0, index: 0)
         encoder.setComputePipelineState(scrollerPipeline)
     }

@@ -192,7 +192,6 @@ kernel void mandelbrotShaderHighResolution(texture2d<float, access::write> outpu
 }
 
 kernel void scroller(texture2d<float, access::write> output [[texture(0)]],
-                     texture2d<float, access::read> open [[texture(1)]],
                      const device uint* state [[buffer(0)]],
                      uint2 upos [[thread_position_in_grid]])
 {
@@ -200,14 +199,12 @@ kernel void scroller(texture2d<float, access::write> output [[texture(0)]],
     uint height = output.get_height();
     if (upos.x > width || upos.y > height) return;
     
-    float4 input = open.read(upos);
-    
     uint highestIteration = 200;
     uint iterationStep = 200;
     uint iterationCounter = 0;
     uint isComplete = 0;
     
-    complex z = complex(input.x, input.y);
+    complex z = complex(0, 0);
     complex c = cartesianPlaneToArgandDiagram(upos.x, upos.y,
                                               width, height,
                                               state+2);
