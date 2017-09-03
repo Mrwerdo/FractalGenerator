@@ -121,9 +121,8 @@ extension Complex {
 public class OverTimeFractalComputer: NSObject, MTKViewDelegate {
     
     private var commandQueue: MTLCommandQueue
-    private var device: MTLDevice
+    public private(set) var device: MTLDevice
     
-    private var shaderSource: String
     private var threadgroupSizes: ThreadgroupSizes
     private var shaderFunction: MTLFunction
     private var pipeline: MTLComputePipelineState
@@ -158,21 +157,14 @@ public class OverTimeFractalComputer: NSObject, MTKViewDelegate {
     
     public enum InitError: Error {
         case couldNotMakeCommandQueue
-        case couldNotMakeShaderFunction
         case couldNotMakeBuffer
     }
     
-    public init(device d: MTLDevice, shaderSource url: URL, functionName: String, argandFrame: ComplexRect) throws {
+    public init(device d: MTLDevice, shader sf: MTLFunction, plane: ComplexRect) throws {
         device = d
         threadgroupSizes = .zeros
-        shaderSource = try String(contentsOf: url)
-        argandDiagramFrame = argandFrame
-        
-        let library = try device.makeLibrary(source: shaderSource, options: nil)
-
-        guard let sf = library.makeFunction(name: functionName) else {
-            throw InitError.couldNotMakeShaderFunction
-        }
+        argandDiagramFrame = plane
+        shaderFunction = sf
         
         guard let cq = device.makeCommandQueue() else {
             throw InitError.couldNotMakeCommandQueue
@@ -184,7 +176,6 @@ public class OverTimeFractalComputer: NSObject, MTKViewDelegate {
         }
         
         pipeline = try device.makeComputePipelineState(function: sf)
-        shaderFunction = sf
         commandQueue = cq
         userArgumentsBuffer = bf
     }
@@ -197,6 +188,10 @@ public class OverTimeFractalComputer: NSObject, MTKViewDelegate {
     }
     
     private func resizePages(for size: CGSize) {
+        
+        renderPageA = nil
+        renderPageB = nil
+        
         guard size.width * size.height != 0 else {
             renderPageA = nil
             renderPageB = nil
@@ -216,6 +211,7 @@ public class OverTimeFractalComputer: NSObject, MTKViewDelegate {
         renderPageB.zero(pixelSize: MemoryLayout<Float32>.size * 4)
         
         threadgroupSizes = pipeline.threadgroupSizesForDrawableSize(size)
+        iterationCount = 0
         needsClear = false
     }
     
