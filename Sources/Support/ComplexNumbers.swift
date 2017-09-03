@@ -12,6 +12,11 @@ public struct Complex : Equatable, CustomStringConvertible, Hashable {
         self.real = real
         self.imaginary = imaginary
     }
+    
+    public init(_ point: CGPoint) {
+        self.init(Double(point.x), Double(point.y))
+    }
+    
     public var description: String {
         let r = String(format: "%f", real)
         let i = String(format: "%f", abs(imaginary))
@@ -193,8 +198,18 @@ public struct ComplexRect : Equatable, CustomStringConvertible {
         bottomRight = Complex(max(c1.real, c2.real), min(c1.imaginary, c2.imaginary))
     }
     
+    private init(_ topLeft: Complex, _ bottomRight: Complex) {
+        self.topLeft = topLeft
+        self.bottomRight = bottomRight
+    }
+    
     public var description: String {
         return "tl: \(topLeft), br: \(bottomRight), bl: \(bottomLeft), tr: \(topRight)"
+    }
+    
+    public mutating func translate(by amount: Complex) {
+        topLeft += amount
+        bottomRight += amount
     }
 }
 

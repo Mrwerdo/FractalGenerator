@@ -54,85 +54,6 @@ namespace fg {
         }
     };
 }
-    
-/*
-
-#define complexExtentX 3.5
-#define complexExtentY 3
-#define mandelbrotShiftX 0.2
-
-/// Convert a point on the screen to a point in the complex plane.
-template<typename T>
-complex<T> screenToComplex(T x, T y, T width, T height)
-{
-    const T scale = max(complexExtentX/width, complexExtentY/height);
-    
-    return complex<T>((x-width/2)*scale, (y-height/2)*scale);
-}
-
-
-/// Both Mandelbrot and Julia sets use the same iterative algorithm to determine whether
-/// a given point is in the set. Each point is colored based on how quickly it escape to infinity.
-template<typename T>
-float4 colorForIteration(complex<T> z, complex<T> c, int maxiters, float escape)
-{
-    for (int i = 0; i < maxiters; i++) {
-        z = z*z + c;
-        if (z.sqmag() > escape) {
-            // Smoothing coloring, adapted from:
-            // <https://en.wikipedia.org/wiki/Mandelbrot_set#Continuous_.28smooth.29_coloring>
-            float hue = (i+1-log2(log10(z.sqmag())/2))/maxiters*4 * M_PI_F + 3;
-            
-            // Convert to RGB
-            return float4((cos(hue)+1)/2,
-                          (-cos(hue+M_PI_F/3)+1)/2,
-                          (-cos(hue-M_PI_F/3)+1)/2,
-                          1);
-        }
-    }
-    
-    return float4(0, 0, 0, 1);
-}
-
-
-/// Render a visualization of the Mandelbrot set into the `output` texture.
-kernel void mandelbrotShader(texture2d<float, access::write> output [[texture(0)]],
-                             uint2 upos [[thread_position_in_grid]])
-{
-    uint width = output.get_width();
-    uint height = output.get_height();
-    if (upos.x > width || upos.y > height) return;
-    
-    complex<float> z(0, 0);
-    
-    complex<float> c = screenToComplex<float>(upos.x - mandelbrotShiftX*width,
-                                              upos.y,
-                                              width, height);
-    
-    output.write(float4(colorForIteration(z, c, 100, 100)), upos);
-}
-
-
-/// Render a visualization of the Julia set for the point `screenPoint` into the `output` texture.
-kernel void juliaShader(texture2d<float, access::write> output [[texture(0)]],
-                        uint2 upos [[thread_position_in_grid]],
-                        const device float2& screenPoint [[buffer(0)]])
-{
-    uint width = output.get_width();
-    uint height = output.get_height();
-    if (upos.x > width || upos.y > height) return;
-    
-    complex<float> z = screenToComplex<float>(upos.x, upos.y, width, height);
-    
-    complex<float> c = screenToComplex<float>(screenPoint.x - mandelbrotShiftX*width,
-                                              screenPoint.y,
-                                              width,
-                                              height);
-    
-    output.write(float4(colorForIteration(z, c, 100, 50)), upos);
-}
- 
- */
 
 // ------------------------------------------------------------------------------
 // Over-time Rendering
@@ -206,6 +127,33 @@ complex cartesianPlaneToArgandDiagram(float x,
     return complex(real, imag);
 }
 
+struct __attribute__((packed)) Arguments  {
+    uint currentFrame;
+    uint iterationsPerFrame;
+    float topLeftReal;
+    float topLeftImag;
+    float bottomRightReal;
+    float bottomRightImag;
+};
+
+struct __attribute__((packed)) PackedComplexNumber {
+    float real;
+    float imag;
+};
+
+struct __attribute__((packed)) Stack {
+    PackedComplexNumber z;
+    uint iterationsPerformed;
+    uint isComplete;
+    
+    Stack(float4 buff) {
+        z.real = buff.x;
+        z.imag = buff.y;
+        iterationsPerformed = binaryCast<float4, uint>(buff.z);
+        isComplete = binaryCast<float4, uint>(buff.w);
+    }
+};
+
 /// Render a visualization of the Mandelbrot set into the `output` texture,
 /// except, this time we will progressively render it in a higher resolution
 /// over time.
@@ -235,10 +183,35 @@ kernel void mandelbrotShaderHighResolution(texture2d<float, access::write> outpu
     
     float4 outbuf;
     outbuf.x = z.real;
-    outbuf.y = z.imag ;
+    outbuf.y = z.imag;
     outbuf.z = binaryCast<uint, float>(iterationCounter);
     outbuf.w = binaryCast<uint, float>(isComplete);
     
     save.write(outbuf, upos);
+    output.write(colorPoint(z, iterationCounter, isComplete, highestIteration), upos);
+}
+
+kernel void scroller(texture2d<float, access::write> output [[texture(0)]],
+                     texture2d<float, access::read> open [[texture(1)]],
+                     const device uint* state [[buffer(0)]],
+                     uint2 upos [[thread_position_in_grid]])
+{
+    uint width = output.get_width();
+    uint height = output.get_height();
+    if (upos.x > width || upos.y > height) return;
+    
+    float4 input = open.read(upos);
+    
+    uint highestIteration = 200;
+    uint iterationStep = 200;
+    uint iterationCounter = 0;
+    uint isComplete = 0;
+    
+    complex z = complex(input.x, input.y);
+    complex c = cartesianPlaneToArgandDiagram(upos.x, upos.y,
+                                              width, height,
+                                              state+2);
+    
+    computeStep(z, c, iterationCounter, isComplete, highestIteration, iterationStep);
     output.write(colorPoint(z, iterationCounter, isComplete, highestIteration), upos);
 }

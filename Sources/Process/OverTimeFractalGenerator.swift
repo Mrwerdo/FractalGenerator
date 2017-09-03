@@ -125,13 +125,15 @@ public class OverTimeFractalComputer: NSObject, MTKViewDelegate {
     
     private var threadgroupSizes: ThreadgroupSizes
     private var shaderFunction: MTLFunction
-    private var pipeline: MTLComputePipelineState
+    private var scrollerFunction: MTLFunction
+    private var realtimeShaderPipeline: MTLComputePipelineState
+    private var scrollerPipeline: MTLComputePipelineState
     private var renderPageA: MTLTexture!
     private var renderPageB: MTLTexture!
     private var userArgumentsBuffer: MTLBuffer
     private var argumentsPaths: [KeyPath<OverTimeFractalComputer, UInt32>] = [
         \.iterationCount,
-        \.iterationsPerFrame,
+        \.framesThisIteration,
         \.argandDiagramFrame.topLeft.real_uint32,
         \.argandDiagramFrame.topLeft.imag_uint32,
         \.argandDiagramFrame.bottomRight.real_uint32,
@@ -150,6 +152,14 @@ public class OverTimeFractalComputer: NSObject, MTKViewDelegate {
     }
     public var iterationLimit: UInt32 = 2000
     public var iterationsPerFrame: UInt32 = 100
+    public var minimumIterationCount: UInt32 = 200
+    public var isScrolling: Bool = false
+    
+    private var isInitialIterationComplete: Bool = false
+    
+    private var framesThisIteration: UInt32 {
+        return isInitialIterationComplete ? iterationsPerFrame : minimumIterationCount
+    }
     
     public var shaderName: String {
         return shaderFunction.name
@@ -160,11 +170,12 @@ public class OverTimeFractalComputer: NSObject, MTKViewDelegate {
         case couldNotMakeBuffer
     }
     
-    public init(device d: MTLDevice, shader sf: MTLFunction, plane: ComplexRect) throws {
+    public init(device d: MTLDevice, shader sf: MTLFunction, scroller: MTLFunction, plane: ComplexRect) throws {
         device = d
         threadgroupSizes = .zeros
         argandDiagramFrame = plane
         shaderFunction = sf
+        scrollerFunction = scroller
         
         guard let cq = device.makeCommandQueue() else {
             throw InitError.couldNotMakeCommandQueue
@@ -175,7 +186,8 @@ public class OverTimeFractalComputer: NSObject, MTKViewDelegate {
             throw InitError.couldNotMakeBuffer
         }
         
-        pipeline = try device.makeComputePipelineState(function: sf)
+        realtimeShaderPipeline = try device.makeComputePipelineState(function: sf)
+        scrollerPipeline = try device.makeComputePipelineState(function: scroller)
         commandQueue = cq
         userArgumentsBuffer = bf
     }
@@ -185,10 +197,10 @@ public class OverTimeFractalComputer: NSObject, MTKViewDelegate {
         renderPageB.zero(pixelSize: MemoryLayout<Float32>.size * 4)
         iterationCount = 0
         needsClear = false
+        isInitialIterationComplete = false
     }
     
     private func resizePages(for size: CGSize) {
-        
         renderPageA = nil
         renderPageB = nil
         
@@ -207,12 +219,8 @@ public class OverTimeFractalComputer: NSObject, MTKViewDelegate {
         
         renderPageA = device.makeTexture(descriptor: d)
         renderPageB = device.makeTexture(descriptor: d)
-        renderPageA.zero(pixelSize: MemoryLayout<Float32>.size * 4)
-        renderPageB.zero(pixelSize: MemoryLayout<Float32>.size * 4)
-        
-        threadgroupSizes = pipeline.threadgroupSizesForDrawableSize(size)
-        iterationCount = 0
-        needsClear = false
+        threadgroupSizes = realtimeShaderPipeline.threadgroupSizesForDrawableSize(size)
+        reset()
     }
     
     private func synchronizeBuffer() {
@@ -227,6 +235,35 @@ public class OverTimeFractalComputer: NSObject, MTKViewDelegate {
         resizePages(for: size)
     }
     
+    func drawRealTimeShader(encoder: MTLComputeCommandEncoder, drawable: CAMetalDrawable) {
+        if needsClear {
+            reset()
+        }
+        if !isInitialIterationComplete {
+            iterationCount = minimumIterationCount
+        } else {
+            iterationCount += 1
+        }
+        synchronizeBuffer()
+        isInitialIterationComplete = true
+        
+        encoder.setTexture(drawable.texture, index: 0)
+        encoder.setTexture(renderPageA, index: 1)
+        encoder.setTexture(renderPageB, index: 2)
+        encoder.setBuffer(userArgumentsBuffer, offset: 0, index: 0)
+        encoder.setComputePipelineState(realtimeShaderPipeline)
+        
+        swap(&renderPageA, &renderPageB)
+    }
+    
+    func drawScrolling(encoder: MTLComputeCommandEncoder, drawable: CAMetalDrawable) {
+        synchronizeBuffer()
+        encoder.setTexture(drawable.texture, index: 0)
+        encoder.setTexture(renderPageA, index: 1)
+        encoder.setBuffer(userArgumentsBuffer, offset: 0, index: 0)
+        encoder.setComputePipelineState(scrollerPipeline)
+    }
+    
     public func draw(in view: MTKView) {
         guard let drawable = view.currentDrawable else {
             return
@@ -237,23 +274,16 @@ public class OverTimeFractalComputer: NSObject, MTKViewDelegate {
         }
         
         autoreleasepool {
-            if needsClear { reset() }
-            
             guard let buffer = commandQueue.makeCommandBuffer(),
                 let encoder = buffer.makeComputeCommandEncoder() else {
                     return
             }
 
-            iterationCount += 1
-            synchronizeBuffer()
-            
-            encoder.setTexture(drawable.texture, index: 0)
-            encoder.setTexture(renderPageA, index: 1)
-            encoder.setTexture(renderPageB, index: 2)
-            encoder.setBuffer(userArgumentsBuffer, offset: 0, index: 0)
-            encoder.setComputePipelineState(pipeline)
-            
-            swap(&renderPageA, &renderPageB)
+            if isScrolling {
+                drawScrolling(encoder: encoder, drawable: drawable)
+            } else {
+                drawRealTimeShader(encoder: encoder, drawable: drawable)
+            }
             
             encoder.dispatchThreadgroups(threadgroupSizes.threadgroupsPerGrid, threadsPerThreadgroup: threadgroupSizes.threadsPerThreadgroup)
             encoder.endEncoding()
